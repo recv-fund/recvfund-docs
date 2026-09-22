@@ -1,0 +1,124 @@
+---
+title: Quick setup
+description: Install recv.fund with the one-line script, with every prompt and its default.
+---
+
+# Quick setup
+
+The installer is a shell script served from `recv.fund`. It writes a compose project under `/opt/recvfund`, pulls the published images and starts them. Run it on a fresh server over SSH.
+
+## 1. Run the script
+
+```bash
+bash <(curl -fsSL https://recv.fund/install.sh)
+```
+
+Add `sudo` in front if your user cannot run Docker. Pass `--mainnet` or `--testnet` to skip the network prompt; see [Script usage](/deployment-guide/script-usage/) for every flag.
+
+## 2. Operations menu
+
+With no flags the script shows a menu. Enter `1` for a fresh install.
+
+```
+recv.fund installer
+
+  1) Install
+  2) Update to the latest images
+  3) Restart
+  4) Status
+  5) Reset (remove containers, images and data)
+
+Choose [1]:
+```
+
+## 3. Network type
+
+```
+Network type
+  1) mainnet   Solana mainnet and Robinhood Chain mainnet
+  2) testnet   Solana devnet and Robinhood Chain testnet
+Choose [2]:
+```
+
+Testnet is the default and the right choice for a first install. The network type is written to `.env` as `NETWORK_TYPE` and cannot be changed later without `--reset`.
+
+## 4. Checks and Docker
+
+The script detects the operating system and architecture (amd64 and arm64 are supported), checks that ports 80 and 443 are free, and installs Docker and the compose plugin if they are missing. It stops with a message if a port is in use; use `--http-port` to run behind your own proxy instead.
+
+## 5. Database
+
+```
+Postgres
+  1) bundled    a postgres container in this compose project
+  2) external   a Postgres 16 server you already run
+Choose [1]:
+```
+
+With `2`, the script asks:
+
+```
+Host:
+Port [5432]:
+Database [recv]:
+User [recv]:
+Password:
+SSL (true/false) [true]:
+```
+
+The bundled database is fine for testnet and for small installs. For mainnet at volume, a managed Postgres with its own backups is the safer choice.
+
+## 6. Domain and TLS
+
+```
+Domain name pointing at this server (empty for plain HTTP on port 80):
+Email for Let's Encrypt notices:
+```
+
+With a domain, Caddy obtains a certificate from Let's Encrypt on first start and renews it. The DNS record must already point at the server. With an empty domain, the stack serves plain HTTP on port 80 and `SITE_URL` is set to `http://<server-ip>`. You can change the site URL later under Settings → Site URL.
+
+## 7. Summary and confirmation
+
+```
+Install directory   /opt/recvfund
+Network type        testnet
+Postgres            bundled
+Domain              pay.example.com
+Site URL            https://pay.example.com
+
+Proceed? [Y/n]:
+```
+
+Press Enter to continue. `--yes` skips this and every earlier prompt, taking the defaults.
+
+## 8. What the script does next
+
+1. Generates `AES_ENCRYPTION_KEY`, `ADMIN_API_KEY`, `POSTGRES_PASSWORD` and `REDIS_PASSWORD`.
+2. Writes `/opt/recvfund/.env` (mode 600), `docker-compose.yml` and `Caddyfile`.
+3. `docker compose pull`
+4. `docker compose run --rm api node dist/src/db/migrate` (schema and seed data)
+5. `docker compose up -d`
+6. Polls `/api/v1/health` until the API answers.
+7. Prints the signup URL.
+
+```
+recv.fund is running.
+
+Create the root account: https://pay.example.com/signup
+Back up /opt/recvfund/.env now. AES_ENCRYPTION_KEY cannot be recovered.
+```
+
+## 9. Create the root account
+
+Open the signup URL in a browser and continue with [Root account setup](/onboarding-guide/root-account-setup/). The signup page is available only until the first account exists.
+
+## Checking on the install
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund ps
+docker compose -p recvfund logs -f --tail=100 api
+curl -s http://127.0.0.1/api/v1/health
+```
+
+Or run the script with `--status`.

@@ -1,0 +1,82 @@
+---
+title: Script usage
+description: Every flag of the recv.fund install script, with what it does and its default.
+---
+
+# Script usage
+
+The install script handles installs, updates, restarts, status checks and resets. It always runs from the published URL:
+
+```bash
+bash <(curl -fsSL https://recv.fund/install.sh) [flags]
+```
+
+Add `sudo` in front if your user cannot run Docker. With no flags the script shows an operations menu.
+
+## Common commands
+
+```bash
+bash <(curl -fsSL https://recv.fund/install.sh) --testnet     # first install, test networks
+bash <(curl -fsSL https://recv.fund/install.sh) --mainnet     # production install
+bash <(curl -fsSL https://recv.fund/install.sh) --update      # pull the latest images, migrate, restart
+bash <(curl -fsSL https://recv.fund/install.sh) --restart     # restart without touching data
+bash <(curl -fsSL https://recv.fund/install.sh) --status      # container status and health
+bash <(curl -fsSL https://recv.fund/install.sh) --reset       # remove everything (asks twice)
+```
+
+## Flags
+
+| Flag | What it does | Default |
+| --- | --- | --- |
+| `--mainnet` | Install against Solana mainnet and Robinhood Chain mainnet. Sets `NETWORK_TYPE=mainnet`. | prompt |
+| `--testnet` | Install against Solana devnet and Robinhood Chain testnet. Sets `NETWORK_TYPE=testnet`. Every payment is a test payment. | prompt (default `testnet`) |
+| `--update` | Pull the images for the configured `IMAGE_TAG`, run migrations against the new image, then swap the containers. Data and `.env` are untouched. | |
+| `--restart` | Restart every container without pulling or changing data. Use it when the dashboard reports that blocks are no longer being processed. | |
+| `--reset` | Stop and remove the containers, the images and every volume, including the bundled database. Asks for confirmation twice. Cannot be undone. Back up `.env` and the database first. | |
+| `--status` | Print `docker compose ps` for the project and the result of `/api/v1/health`. | |
+| `--yes` | Accept the default answer for every prompt. Combine with the flags below for an unattended install. | |
+| `--domain <name>` | Hostname that points at this server. Caddy obtains a Let's Encrypt certificate for it. Sets `SITE_DOMAIN` and `SITE_URL=https://<name>`. | prompt; empty means plain HTTP |
+| `--email <address>` | Email address for Let's Encrypt notices. Sets `ACME_EMAIL`. Only used with `--domain`. | prompt |
+| `--external-db <url>` | Use an existing Postgres 16 server instead of the bundled container. The URL is `postgres://user:password@host:5432/database?sslmode=require`. The stack then starts without the `db` profile. | bundled Postgres |
+| `--http-port <port>` | Serve plain HTTP on that host port instead of 80 and 443, for a server where your own proxy terminates TLS. Sets `SITE_DOMAIN=:80` and maps the port. Set the public address with `--domain`-style values in `SITE_URL` afterwards or under Settings → Site URL. | 80 and 443 |
+| `--image-tag <tag>` | Image tag to pull, for pinning a version. Written to `.env` as `IMAGE_TAG`. | `latest` |
+| `--dir <path>` | Install directory. | `/opt/recvfund` |
+| `--source <path>` | Build the API and web images from a source checkout at `<path>` instead of pulling them. Only for people with source access. | pull published images |
+
+## Examples
+
+Unattended testnet install on an IP address:
+
+```bash
+bash <(curl -fsSL https://recv.fund/install.sh) --testnet --yes
+```
+
+Mainnet with a domain, Let's Encrypt and a managed database:
+
+```bash
+bash <(curl -fsSL https://recv.fund/install.sh) --mainnet \
+  --domain pay.example.com --email ops@example.com \
+  --external-db 'postgres://recv:secret@db.example.com:5432/recv?sslmode=require' --yes
+```
+
+Behind your own proxy on port 8080:
+
+```bash
+bash <(curl -fsSL https://recv.fund/install.sh) --mainnet --http-port 8080 --yes
+```
+
+Pin a version and update to it later:
+
+```bash
+bash <(curl -fsSL https://recv.fund/install.sh) --update --image-tag 1.0.2
+```
+
+## What the script writes
+
+```
+/opt/recvfund/.env                 mode 600; AES_ENCRYPTION_KEY is the value to back up
+/opt/recvfund/docker-compose.yml
+/opt/recvfund/Caddyfile
+```
+
+See [Advanced setup](/deployment-guide/advanced-setup/) for the contents of each file.

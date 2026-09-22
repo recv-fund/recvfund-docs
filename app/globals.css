@@ -1,0 +1,10 @@
+/* The wordmark is text on purpose: there is no logo image to load or theme. */
+.wordmark {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-size: 1.05rem;
+}
+
+.navbar-text-link {
+  font-size: 0.875rem;
+}

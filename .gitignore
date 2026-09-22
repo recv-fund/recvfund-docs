@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+_pagefind/
+*.tsbuildinfo
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+.vercel/
+
+# local agent skills, kept out of the repo
+.claude/

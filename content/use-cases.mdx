@@ -1,0 +1,30 @@
+---
+title: Use cases
+description: Who recv.fund is built for and what each kind of business gets from it.
+---
+
+# Use cases
+
+## Apps on Robinhood Chain
+
+Take USDG from Robinhood users and receive it in your own wallet. Robinhood Chain is the first chain recv.fund supports. Your checkout page builds a transaction that calls the program's `pay` function; the customer signs it in their wallet, and the merchant share lands in your settlement wallet in the same transaction.
+
+What you use: the hosted checkout page or the [Payments API](/api-integration/payments-api/), webhooks, and the dashboard.
+
+## Businesses whose customers pay from an exchange
+
+Digital goods, hosting, SaaS, marketplaces, gaming. Your customers withdraw from an exchange account rather than connect a wallet. They need an address to send to, not a button to click.
+
+recv.fund gives every customer a permanent deposit address per chain. The customer sends any amount, from any exchange or wallet. Your server watches the address, credits the payment, and sweeps the balance to your settlement wallet on the triggers you set.
+
+What you use: [Assign deposit address](/api-integration/payments-api/assign-deposit-address/), [Customer deposit wallets](/features/customer-deposit-wallets/), [Sweeps](/features/sweeps/).
+
+## Stores
+
+Stores that already accept crypto through a hosted gateway and want the funds to arrive in their own wallet instead. Create payment links from the dashboard, or create payments from your store's backend with one API call and redirect the customer to the checkout URL. Confirm the order from the `FILLED` webhook.
+
+What you use: [Payment links](/features/payment-links/), [Create payment](/api-integration/payments-api/create-payment/), [Webhook](/api-integration/payments-api/webhook/).
+
+## Agencies and marketplaces (later)
+
+Agencies that deploy under their own brand for the merchants they serve, and marketplaces that pay out to many recipients. Operator mode, which lets one install manage several merchants with a markup, is planned and not part of this release. See [Operator mode](/features/operator-mode/). Today one install serves one business with any number of [projects](/features/multi-brand-projects/).

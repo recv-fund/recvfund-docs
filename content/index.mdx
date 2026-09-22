@@ -1,0 +1,48 @@
+---
+title: Welcome
+description: What recv.fund is, what runs on your server, what never leaves your control, and the chains and tokens supported at launch.
+---
+
+# Welcome to recv.fund
+
+recv.fund is self-hosted, non-custodial stablecoin payment software. You install it on a Linux server you control. It gives you a dashboard, a hosted checkout page, a JSON API and webhooks. When a customer pays, the funds move through the recv.fund on-chain program to the settlement wallet you registered. Nothing we run is in the path of a payment.
+
+recv.fund is software, not a payment service. We never hold, process or transfer funds for anyone. Your own wallet receives them. You remain responsible for your own legal obligations in your jurisdiction.
+
+## What runs on your server
+
+One `docker compose` project, written to `/opt/recvfund` by the installer:
+
+| Service | Role |
+| --- | --- |
+| `caddy` | Terminates TLS and serves everything on ports 80 and 443. Routes `/api/*` to the API and everything else to the web app. |
+| `api` | The server. Runs the public API, the dashboard API, the chain watchers, the sweep scheduler, payouts and webhook delivery. |
+| `web` | The dashboard and the hosted checkout page at `/payments`. |
+| `postgres` | The database. Optional: the installer can point the stack at an external Postgres instead. |
+| `redis` | Cache and queues. |
+
+Dashboard, checkout page and API share one origin, so there is no separate API port.
+
+## What never leaves your control
+
+- **Your settlement wallet.** Funds arrive at the address you registered on-chain. Only a transaction signed by your admin wallet can change it.
+- **Deposit addresses.** Each customer gets a permanent deposit address per chain. The address is derived from the on-chain program. No private key for it exists anywhere, on your server or ours.
+- **The one key on the server.** Your hot wallet. It pays transaction fees for sweeps and sends the payouts you approve. Its private key is entered once in the dashboard and stored encrypted with a key that only your server holds.
+- **The program.** The on-chain program can move funds only to your registered settlement wallet and to the fee collector. It has no pause or freeze function, so funds at a deposit address can always be swept.
+
+The service fee is a percentage per settlement, enforced by the on-chain program. The rate is read from the program and shown in your dashboard before you register.
+
+## Chains and tokens at launch
+
+| Chain | Code | Tokens |
+| --- | --- | --- |
+| Solana | `SOLANA` | USDC, USDT, SOL |
+| Robinhood Chain | `ROBINHOOD` | USDG, ETH |
+
+Every install runs against either mainnet or the test networks (Solana devnet and Robinhood Chain testnet). You pick at install time.
+
+## Where to start
+
+1. [Deployment guide](/deployment-guide/introduction/): install with one command.
+2. [Onboarding guide](/onboarding-guide/introduction/): create the root account, register on-chain, set up a hot wallet, take a test payment.
+3. [API integration](/api-integration/introduction/): create payments and receive webhooks from your own systems.

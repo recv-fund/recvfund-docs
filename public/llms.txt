@@ -1,0 +1,17 @@
+# recv.fund documentation
+
+> Documentation for recv.fund, self-hosted, non-custodial stablecoin payment software for Solana and Robinhood Chain. Merchants run the server; funds settle to a wallet they register on-chain.
+
+## Introduction
+
+- [Welcome](https://docs.recv.fund/): What recv.fund is, what runs on your server, what never leaves your control, and the chains and tokens supported at launch.
+- [What's new](https://docs.recv.fund/whats-new/): Release notes for recv.fund, newest first.
+- [Use cases](https://docs.recv.fund/use-cases/): Who recv.fund is built for and what each kind of business gets from it.
+
+## Deployment guide
+
+- [Introduction](https://docs.recv.fund/deployment-guide/introduction/): Three ways to run recv.fund on your own server - the one-line script, a docker compose project you write by hand, or a build from source - and what the server needs.
+- [Quick setup](https://docs.recv.fund/deployment-guide/quick-setup/): Install recv.fund with the one-line script, with every prompt and its default.
+- [Advanced setup](https://docs.recv.fund/deployment-guide/advanced-setup/): The compose project the installer writes, every environment variable, volumes, external Postgres, running behind your own proxy, and updating by hand.
+- [Script usage](https://docs.recv.fund/deployment-guide/script-usage/): Every flag of the recv.fund install script, with what it does and its default.
+

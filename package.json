@@ -5,7 +5,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "dev": "next dev -p 3040",
-    "build": "next build && pagefind --site .next/server/app --output-path out/_pagefind",
+    "build": "node scripts/llms-txt.mjs && next build && pagefind --site .next/server/app --output-path out/_pagefind",
+    "llms": "node scripts/llms-txt.mjs",
     "start": "serve out -l 3040",
     "typecheck": "tsc --noEmit",
     "biome": "biome check --write .",

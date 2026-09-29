@@ -48,7 +48,7 @@ services:
       - api
 
   api:
-    image: ghcr.io/recvfund/recvfund-api:${IMAGE_TAG:-latest}
+    image: ghcr.io/recv-fund/recvfund-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -80,7 +80,7 @@ services:
       retries: 3
 
   web:
-    image: ghcr.io/recvfund/recvfund-web:${IMAGE_TAG:-latest}
+    image: ghcr.io/recv-fund/recvfund-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production

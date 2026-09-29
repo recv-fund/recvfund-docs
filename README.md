@@ -34,9 +34,48 @@ Node 22 or newer and yarn 1.22.
 ```
 app/                 Next root layout, catch-all page, global styles
 content/             MDX pages and _meta.ts sidebar definitions
-public/llms.txt      one line per page, for language-model readers
+public/llms.txt      one line per page, for language-model readers (generated)
+scripts/llms-txt.mjs writes public/llms.txt from page front matter; runs before next build
 types/css.d.ts       declaration for global stylesheet imports
 ```
+
+## Sections
+
+| Folder | Pages |
+|---|---|
+| `content/` | Welcome, What's new, Use cases |
+| `content/deployment-guide/` | Introduction, Quick setup, Advanced setup, Script usage |
+| `content/onboarding-guide/` | Introduction, Root account setup, Node configuration, Hot wallet, Merchant registration, Test payment, Funds sweeping |
+| `content/features/` | Overview, Payment links, Customer deposit wallets, Projects, API keys, User management, Analytics, Payouts, Sweeps, Webhooks, Operator mode |
+| `content/api-integration/` | Introduction, Payments API (overview, create payment, deposit options, assign deposit address, payment status, webhook), Checkout endpoints, Payouts API |
+| `content/support/` | Glossary, Networks and tokens, Links, Change log, FAQ |
+
+Every page states only what `../recvfund-server/docs/*.md` and the server
+code implement. Features that are planned but not implemented (WalletConnect,
+low-balance alerts, operator mode, the public ticker endpoint, deep-reorg
+reconciliation) are marked as not available in this release. When the server
+changes, update the page that describes it in the same change.
+
+## Writing rules
+
+- Front matter `title` and `description` on every page. Quote a description
+  that contains a colon followed by a space, or the YAML parser fails the build.
+- Internal links are absolute with a trailing slash: `/features/webhooks/`.
+- Plain, precise technical language; no slang, hype or metaphors; no em-dashes.
+- Every folder has a `_meta.ts` naming its pages in sidebar order.
+
+## Verification
+
+```bash
+yarn typecheck
+yarn biome:ci
+yarn build        # fails on a bad _meta.ts key, invalid front matter or an MDX error
+```
+
+`yarn build` writes `out/` and reports the page count; `public/llms.txt` is
+regenerated at the start. The `zod` resolution in `package.json` pins the
+version `nextra-theme-docs` 4.6.1 was written against; with zod 4.6 the
+theme's Layout props validation fails on every page.
 
 ## Writing pages
 

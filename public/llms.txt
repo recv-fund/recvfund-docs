@@ -15,3 +15,47 @@
 - [Advanced setup](https://docs.recv.fund/deployment-guide/advanced-setup/): The compose project the installer writes, every environment variable, volumes, external Postgres, running behind your own proxy, and updating by hand.
 - [Script usage](https://docs.recv.fund/deployment-guide/script-usage/): Every flag of the recv.fund install script, with what it does and its default.
 
+## Onboarding guide
+
+- [Introduction](https://docs.recv.fund/onboarding-guide/introduction/): What onboarding covers, the order of the steps, what you need before you start, and what an installation needs before it can accept a payment.
+- [Root account setup](https://docs.recv.fund/onboarding-guide/root-account-setup/): The signup page that creates the owner account and first project, signing in, changing passwords, the first installation settings, and inviting teammates.
+- [Node configuration](https://docs.recv.fund/onboarding-guide/node-configuration/): The Nodes page - the deployed program address per network, the RPC node pool with preferred, active and public flags, connection tests, processing cursors and the currency catalog.
+- [Hot wallet](https://docs.recv.fund/onboarding-guide/hot-wallet/): The one private key the server holds - generating or importing it, how it is stored, assigning it to projects, reading balances, funding it, and what it pays for.
+- [Merchant registration](https://docs.recv.fund/onboarding-guide/merchant-registration/): Registering a project on-chain from the Registrations page - connecting a browser wallet, choosing the settlement wallet, signing the transaction, confirming it on the server, and what changes afterwards.
+- [Test payment](https://docs.recv.fund/onboarding-guide/test-payment/): Creating a customer and a payment link in the dashboard, what the customer sees on the checkout page, how the payment is credited and confirmed, and what the dashboard shows.
+- [Funds sweeping](https://docs.recv.fund/onboarding-guide/funds-sweeping/): How deposit balances reach the settlement wallet - the activation threshold, the amount, address-count and time triggers, manual sweeps on the Sweeps page, the fee, what the hot wallet pays, and what a sweep does to the deposit account.
+
+## Features
+
+- [Features](https://docs.recv.fund/features/): What the recv.fund dashboard, checkout page and API do, with one page per feature.
+- [Payment links](https://docs.recv.fund/features/payment-links/): Creating payments from the dashboard or the API, what a payment carries, its states, the checkout page the customer sees, partial and over payment, expiry, history and CSV export.
+- [Customer deposit wallets](https://docs.recv.fund/features/customer-deposit-wallets/): Permanent per-customer deposit addresses derived from the on-chain program, how deposits are found and credited, unmatched deposits, missed-payment rechecks and customer history.
+- [Projects](https://docs.recv.fund/features/multi-brand-projects/): One install, several brands. Each project has its own branding, enabled currencies, payout policy, API keys, webhook endpoints, hot wallet assignment and team membership.
+- [API keys](https://docs.recv.fund/features/api-keys/): Project API keys on the Developers page, the API-Key header, what a key can reach, revocation and the per-key rate limit.
+- [User management](https://docs.recv.fund/features/user-management/): The five roles, inviting members with a temporary password, forced password change, deactivation, session revocation and the activity log.
+- [Analytics](https://docs.recv.fund/features/analytics/): The overview page: confirmed receipts in USD, date presets and custom ranges, receipts by project and by network or currency, first-time and returning payers.
+- [Payouts](https://docs.recv.fund/features/payouts/): Sending funds from the hot wallet: the address book, creating a payout, approval by email one-time code, USD minimum and limits, durable execution, states and payout webhooks.
+- [Sweeps](https://docs.recv.fund/features/sweeps/): Moving customer deposit balances to your settlement wallet through the program: activation threshold, amount, count and time triggers, automatic scheduling, manual sweeps, the fee at sweep, execution and bookkeeping.
+- [Webhooks](https://docs.recv.fund/features/webhooks/): Endpoints per project, the X-Recv-Signature and X-Payram-Signature headers, HMAC verification, the retry schedule, the delivery log and the SEND_WEBHOOKS switch.
+- [Operator mode](https://docs.recv.fund/features/operator-mode/): Operator mode, one install serving several merchants with a markup, is planned and not part of this release. What one install can do today.
+
+## API integration
+
+- [Introduction](https://docs.recv.fund/api-integration/introduction/): Base URL, the API-Key header, rate limits, idempotency, test mode, reference ids, the end-to-end payment flow and what is and is not compatible with PayRam.
+- [Overview](https://docs.recv.fund/api-integration/payments-api/): The four payment endpoints and the payment webhook, what each one does and when to call it.
+- [Checkout endpoints](https://docs.recv.fund/api-integration/checkout-endpoints/): The public endpoints behind the hosted checkout page, keyed by reference id, for merchants who build their own checkout: read, select a currency, prepare a wallet transaction, confirm a hash.
+- [Payouts API](https://docs.recv.fund/api-integration/payouts-api/): Create, read and list payouts from the project's hot wallet with the API key, how approval and idempotency work, and the payout webhook events.
+- [Create payment](https://docs.recv.fund/api-integration/payments-api/create-payment/): POST /api/v1/payment creates a payment for a customer and returns its reference id and checkout URL.
+- [Deposit options](https://docs.recv.fund/api-integration/payments-api/deposit-options/): GET /api/v1/blockchain-currency/reference/{reference_id} lists every currency the customer may pay with and the deposit address already assigned on each chain.
+- [Assign deposit address](https://docs.recv.fund/api-integration/payments-api/assign-deposit-address/): POST /api/v1/deposit-address/reference/{reference_id} derives the customer's permanent deposit address on a chain and selects that chain for the payment.
+- [Payment status](https://docs.recv.fund/api-integration/payments-api/payment-status/): GET /api/v1/payment/reference/{reference_id} returns the state, amounts, deposit address and confirmation progress of a payment.
+- [Payment webhook](https://docs.recv.fund/api-integration/payments-api/webhook/): Event names, payload fields, the X-Recv-Signature and X-Payram-Signature headers, how to verify the HMAC, the retry schedule and how to handle deliveries idempotently.
+
+## Support
+
+- [Glossary](https://docs.recv.fund/support/glossary/): Terms as recv.fund uses them in the dashboard, the API, the on-chain program and this documentation.
+- [Networks and tokens](https://docs.recv.fund/support/networks/): The chains, networks, RPC endpoints, explorers, tokens, decimals and confirmation defaults an install ships with.
+- [Links](https://docs.recv.fund/support/links/): The recv.fund sites, the installer, chain explorers, RPC endpoints, token references and how to contact the team.
+- [Change log](https://docs.recv.fund/support/change-log/): Every recv.fund release, newest first, with what it includes and what it does not.
+- [FAQ](https://docs.recv.fund/support/faq/): Answers on custody, fees, downtime, keys, wallets, underpayment, expiry, refunds, testnets, updates, backups and support.
+

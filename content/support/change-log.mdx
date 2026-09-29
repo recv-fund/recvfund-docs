@@ -1,0 +1,83 @@
+---
+title: Change log
+description: Every recv.fund release, newest first, with what it includes and what it does not.
+---
+
+# Change log
+
+Short release notes are on the [What's new](/whats-new/) page. This page is the full record.
+
+## 2026-09: Initial release
+
+The first public release of recv.fund.
+
+### Chains and tokens
+
+- Solana (`SOLANA`): USDC, USDT and SOL on mainnet; USDC and SOL on devnet.
+- Robinhood Chain (`ROBINHOOD`): USDG and ETH on mainnet and testnet.
+- Seeded public RPC endpoints and explorers per network. Up to ten RPC nodes per chain, with a preferred node and automatic failover for reads.
+- Default confirmations of 1 on Solana and 12 on Robinhood Chain, with a per-project override.
+
+### Installation
+
+- One-line installer for mainnet or testnet: installs Docker if missing, asks for network type, Postgres (bundled or external) and HTTPS (Let's Encrypt or plain HTTP), generates secrets, runs migrations and starts the stack.
+- Update, restart, status and reset operations from the same script.
+- Compose stack of Caddy, API, web app, Redis and optional bundled Postgres, with dashboard, checkout and API on one origin.
+
+### Accounts and projects
+
+- Root account wizard at `/signup`; email and password login with session refresh.
+- Team roles: owner, admin, project lead, project manager and project ops. Invitations with a temporary password.
+- Projects with branding (logo, color, redirect URLs), enabled currencies, API keys, webhook endpoints and payout limits.
+- Activity log of write and denied requests.
+- Settings for site URL, SMTP, native coin pricing and WalletConnect project id.
+
+### On-chain registration and wallets
+
+- Merchant registration per project per chain, signed in the browser with an injected wallet. The signing wallet becomes the admin; the settlement wallet and the sweeper are recorded on-chain.
+- Settlement wallet, sweeper and active-flag updates, prepared by the server and signed by the admin wallet.
+- Hot wallets per chain family, generated or imported in the dashboard and stored encrypted. Balance reads on request.
+- Deposit addresses derived from the program (Solana PDA, Robinhood Chain CREATE2). No deposit keys on the server.
+
+### Payments
+
+- Payment links from the dashboard and `POST /api/v1/payment` from the API, with USD amounts, optional currency and network restriction, and expiry.
+- Hosted checkout page with currency selection, exact quotes, deposit address and QR code, and wallet payment through the program for SPL tokens, ERC-20 tokens and native ETH.
+- Program-event discovery per chain with a resumable cursor, so checkout payments are credited even when the browser never reports the hash.
+- Deposit discovery per address and currency with resumable progress, matching to the customer's newest eligible payment, and unmatched deposits kept under the customer.
+- Confirmation tracking with `payment.confirming` progress events, fill tolerance, and the states `OPEN`, `PARTIALLY_FILLED`, `FILLED`, `OVER_FILLED` and `CANCELLED`.
+- Missed payment reports: submit a transaction hash for verification and credit.
+- Payment history with search, filters, detail and CSV export.
+
+### Sweeps
+
+- Automatic sweeps per project and chain with an activation threshold and amount, count and time triggers.
+- Manual sweeps of selected addresses and currencies.
+- Signed transactions are stored before broadcast and confirmed from the program's sweep event.
+
+### Payouts
+
+- Payout requests from the dashboard and from `POST /api/v1/withdrawal/merchant`, in token units, from the project's hot wallet.
+- Address book per project.
+- USD limits per recipient email: minimum, hourly, daily and auto-approve maximum.
+- Approval by a one-time code emailed to an administrator. Idempotency keys and duplicate detection.
+- Payout lifecycle webhooks.
+
+### API and webhooks
+
+- Payments and payouts API with PayRam-compatible paths, field names and states, authenticated with the `API-Key` header.
+- Signed webhooks (`X-Recv-Signature`, HMAC-SHA256) with a ten-attempt retry schedule, delivery history and manual redelivery.
+
+### Analytics
+
+- Dashboard with confirmed receipts, volume and payer activity per project and period.
+
+### Not in this release
+
+- WalletConnect and EIP-2612 `permit` on the checkout page and in registration. Only injected browser wallets are supported.
+- A direct SOL checkout instruction. SOL is accepted through deposit addresses.
+- Low-balance email alerts for hot wallets.
+- Operator mode (one install serving several merchants with a markup).
+- Automatic reconciliation after a deep chain reorganisation.
+- The public `/api/v1/ticker` price endpoint.
+- Token-2022 mints on Solana.

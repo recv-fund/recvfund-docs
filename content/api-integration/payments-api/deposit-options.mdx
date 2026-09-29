@@ -1,0 +1,101 @@
+---
+title: Deposit options
+description: GET /api/v1/blockchain-currency/reference/{reference_id} lists every currency the customer may pay with and the deposit address already assigned on each chain.
+---
+
+# Deposit options
+
+```
+GET /api/v1/blockchain-currency/reference/{reference_id}
+```
+
+Returns the currencies available for this payment: the project's enabled currencies on active chains of the install's network that have an active merchant registration, narrowed by the `currency` and `network` restrictions given at creation. For each one, `customerAddress` is the receiving address if the customer already has an active deposit address on that chain, or empty.
+
+Headers: `API-Key`.
+
+## Request
+
+```bash
+curl https://<your-site>/api/v1/blockchain-currency/reference/c80f5363-0397-4761-aa1a-3155c3a21470 \
+  -H "API-Key: 811b12035f0dfa8ffd62296df3c98b27"
+```
+
+| Parameter | In | Constraints |
+| --- | --- | --- |
+| `reference_id` | path | Version 4 UUID from create payment. |
+
+## Response
+
+`200 OK`, a JSON array. The array is empty when the payment is filled, over-filled, cancelled, expired, or its customer is inactive.
+
+```json
+[
+  {
+    "id": 3,
+    "blockchainCode": "SOLANA",
+    "network": "Solana",
+    "currencyCode": "USDC",
+    "currency": "USD Coin",
+    "customerAddress": "",
+    "tokenAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "standard": "spl",
+    "walletPrecision": 6,
+    "family": "solana",
+    "recommended": true,
+    "mostUsed": false,
+    "blockchainID": 1,
+    "currencyID": 3
+  },
+  {
+    "id": 7,
+    "blockchainCode": "ROBINHOOD",
+    "network": "Robinhood Chain",
+    "currencyCode": "USDG",
+    "currency": "Global Dollar",
+    "customerAddress": "0x2f1a4c8e9b7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f",
+    "tokenAddress": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+    "standard": "erc20",
+    "walletPrecision": 6,
+    "family": "evm",
+    "recommended": true,
+    "mostUsed": false,
+    "blockchainID": 2,
+    "currencyID": 7
+  }
+]
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | integer | Currency id. Same value as `currencyID`. |
+| `blockchainCode` | string | `SOLANA` or `ROBINHOOD`. The value to send to [Assign deposit address](/api-integration/payments-api/assign-deposit-address/). |
+| `network` | string | Display name of the chain. |
+| `currencyCode` | string | Currency code, for example `USDC`. |
+| `currency` | string | Display name of the currency. |
+| `customerAddress` | string | The address to send this currency to, or `""` if no active deposit address exists for the customer on this chain yet. For an SPL token this is the token account (the mint's associated token account owned by the customer's deposit account), not the deposit account itself. For native and ERC-20 currencies it is the deposit address. |
+| `tokenAddress` | string | Mint or contract address. `native` for SOL; the zero address `0x0000000000000000000000000000000000000000` for ETH. |
+| `standard` | string | `native`, `spl` or `erc20`. |
+| `walletPrecision` | integer | Decimal places of the currency. |
+| `family` | string | `solana` or `evm`. |
+| `recommended` | boolean | `true` for stablecoins. |
+| `mostUsed` | boolean | Always `false`. Usage ranking is not implemented. |
+| `blockchainID` | integer | Chain id in this install's catalog. Also the `chainID` value for the checkout `confirm` endpoint. |
+| `currencyID` | integer | Currency id. Also the `currencyID` value for the checkout `select` endpoint. |
+
+Order follows the catalog sort order, then currency id. Inactive deposit addresses are not reported.
+
+## Errors
+
+| Status | `code` | Cause |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST` | `reference_id` is not a version 4 UUID. |
+| 401 | `UNAUTHORIZED` | Invalid API key. |
+| 404 | `NOT_FOUND` | No payment with this reference id in the key's project. |
+| 429 | `RATE_LIMITED` | Per-key limit exhausted. |
+| 503 | `UNAVAILABLE` | Rate-limit setting invalid or Redis unreachable. |
+
+## Notes
+
+- A deposit address is permanent per customer and chain. Once assigned, on this payment or an earlier one, every option on that chain reports it.
+- Deposit addresses are derived from the on-chain program. No private key for them exists on any server. See [Customer deposit wallets](/features/customer-deposit-wallets/).
+- No RPC call is made by this endpoint.

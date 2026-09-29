@@ -1,0 +1,167 @@
+---
+title: Payment webhook
+description: Event names, payload fields, the X-Recv-Signature and X-Payram-Signature headers, how to verify the HMAC, the retry schedule and how to handle deliveries idempotently.
+---
+
+# Payment webhook
+
+Your server registers one or more endpoint URLs per project in the dashboard under Developers, section Webhook endpoints ([Webhooks](/features/webhooks/)). Each endpoint gets its own secret, shown once at creation and on rotation. Every active endpoint of a project receives every payment event and every [payout event](/api-integration/payouts-api/) of that project.
+
+Delivery rows are written in the same database transaction as the payment change, so an event is never lost between the change and the queue. A worker sends them; `SEND_WEBHOOKS=false` in the install's `.env` stops all sending without discarding the queue.
+
+## Delivery
+
+```
+POST <your endpoint URL>
+Content-Type: application/json
+X-Recv-Signature: sha256=<hex>
+X-Payram-Signature: sha256=<hex>
+X-Recv-Event: payment.filled
+X-Recv-Delivery: 1042
+```
+
+| Header | Value |
+| --- | --- |
+| `X-Recv-Signature` | `sha256=` followed by the lowercase hex HMAC-SHA256 of the exact request body, keyed with the endpoint's secret string. |
+| `X-Payram-Signature` | The same value, for handlers written against PayRam. Note that PayRam keys its HMAC with the project API key; recv.fund keys it with the endpoint secret. |
+| `X-Recv-Event` | The event name (table below). |
+| `X-Recv-Delivery` | The delivery id, a decimal integer as a string. Stable across every retry of the same delivery. |
+
+Endpoint URLs must be `http:` or `https:` with no credentials or fragment. They may be on your internal network.
+
+## Events
+
+| `X-Recv-Event` | Payload `status` | When |
+| --- | --- | --- |
+| `payment.open` | `OPEN` | The payment was created. |
+| `payment.confirming` | `OPEN` | A transfer's confirmation count changed. One delivery per newly observed count per transfer; `confirmation_current` and `confirmation_required` carry the progress. |
+| `payment.filled` | `FILLED` | Confirmed funds are within the fill tolerance of the requested amount. |
+| `payment.partially-filled` | `PARTIALLY_FILLED` | Confirmed funds are below the requested amount. |
+| `payment.over-filled` | `OVER_FILLED` | Confirmed funds exceed the requested amount. |
+| `payment.cancelled` | `CANCELLED` | The payment expired while open or was cancelled from the dashboard. |
+
+Flow: `OPEN` → one `payment.confirming` per confirmation step → `FILLED`, `PARTIALLY_FILLED` or `OVER_FILLED`; or `OPEN` → `CANCELLED`. A transfer confirmed after cancellation still produces a filled-state event. A partially filled payment can later become filled or over-filled.
+
+## Payload
+
+```json
+{
+  "customer_id": "1234",
+  "invoice_id": "INV-0090",
+  "reference_id": "c80f5363-0397-4761-aa1a-3155c3a21470",
+  "status": "FILLED",
+  "amount": "50.000000",
+  "currency": "USDC",
+  "network": "SOLANA",
+  "filled_amount": "50.000000",
+  "filled_amount_in_usd": "50.000000",
+  "sponsored_amount": "0",
+  "sponsored_amount_in_usd": "0",
+  "timestamp": 1758524022,
+  "payment_info": [
+    {
+      "source_address": "7a2CkQ1v8mT5yRbGxWn3uHs9dLp4eJf6cVa2NzKq8YtB",
+      "transaction_hash": "5KjP2n8vQ4wR7tY1uI3oA6sD9fG2hJ4kL7zX0cV5bN8mQ1wE3rT6yU9iO2pA5sD8f",
+      "destination_address": "4Nd1mYw9zqXxq2Vb7Lr8KfJ3sT6uHc1pQe9RaBwDgF2h",
+      "block_number": 301234567,
+      "kind": "deposit",
+      "currency_id": 3,
+      "amount_raw": "50000000",
+      "fee_raw": null,
+      "status": "confirmed"
+    }
+  ],
+  "confirmation_current": 1,
+  "confirmation_required": 1
+}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `customer_id` | string | Your `customerID`. |
+| `invoice_id` | string | Your `invoiceID`, or `""`. |
+| `reference_id` | string | The payment's reference id. |
+| `status` | string | `OPEN`, `PARTIALLY_FILLED`, `FILLED`, `OVER_FILLED` or `CANCELLED`. |
+| `amount` | string | Requested USD amount. |
+| `currency` | string | Selected currency code, or `""` before selection. |
+| `network` | string | Chain code of the selected chain (or, for `payment.confirming`, of the transfer's chain), or `""`. |
+| `filled_amount` | string | Confirmed amount in units of the selected currency, padded to its decimals. `"0"` before selection. |
+| `filled_amount_in_usd` | string | Confirmed USD amount, six decimals. |
+| `sponsored_amount` | string | Always `"0"`. Kept for PayRam field compatibility. |
+| `sponsored_amount_in_usd` | string | Always `"0"`. |
+| `timestamp` | integer | Unix time in seconds when the event was recorded. |
+| `payment_info` | array | Up to 100 transfers recorded against this payment, oldest first, including transfers not yet confirmed. |
+| `payment_info[].source_address` | string | Sending address. |
+| `payment_info[].transaction_hash` | string | Transaction hash or Solana signature. |
+| `payment_info[].destination_address` | string | Receiving address. For a wallet checkout payment this is the program address. |
+| `payment_info[].block_number` | integer | Block or slot. |
+| `payment_info[].kind` | string | `deposit` (transfer to a deposit address) or `checkout-pay` (wallet checkout through the program). |
+| `payment_info[].currency_id` | integer | Catalog id of the transferred currency. |
+| `payment_info[].amount_raw` | string | Transferred amount in base units of that currency (gross, before fee). |
+| `payment_info[].fee_raw` | string or null | Program fee in base units for `checkout-pay`; `null` for deposits, whose fee is taken at sweep. |
+| `payment_info[].status` | string | `detected`, `confirmed` or `orphaned`. |
+| `confirmation_current` | integer | For `payment.confirming`, the transfer's new count. Otherwise the lowest count across transfers, `0` with none. |
+| `confirmation_required` | integer | The chain's threshold, `0` when no chain is set. |
+
+All amounts are strings. The payload is a snapshot taken when the event was recorded and does not change on retry.
+
+## Verifying the signature
+
+Compute HMAC-SHA256 over the raw request bytes with the endpoint secret, prefix `sha256=`, and compare with `X-Recv-Signature` in constant time. Read the raw body before any JSON parsing or re-serialization; a re-serialized body will not match.
+
+```js
+import { createHmac, timingSafeEqual } from 'node:crypto';
+import express from 'express';
+
+const secret = process.env.RECV_WEBHOOK_SECRET;
+const app = express();
+
+app.post('/webhooks/recv', express.raw({ type: 'application/json' }), (req, res) => {
+  const expected = Buffer.from(
+    `sha256=${createHmac('sha256', secret).update(req.body).digest('hex')}`,
+  );
+  const given = Buffer.from(req.get('X-Recv-Signature') ?? '');
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
+    return res.status(401).end();
+  }
+
+  const deliveryId = req.get('X-Recv-Delivery');
+  const event = JSON.parse(req.body.toString('utf8'));
+  // 1. If deliveryId has been processed, return 200 without doing anything.
+  // 2. Record deliveryId, then handle event.status for event.reference_id.
+  res.status(200).end();
+});
+```
+
+After a secret rotation the next attempt of every pending delivery is signed with the new secret. Keep the old secret accepted only for as long as you need to drain in-flight retries.
+
+## Retries
+
+Only an HTTP 2xx response counts as delivered. A 3xx is not followed and counts as a failure, as does any other status, a connection error, or no response within `webhook.timeoutMs` (default 60000 ms; 100 to 60000). The response body is discarded.
+
+Failed attempts are retried on `webhook.retryScheduleSeconds`. The default gives ten attempts in total:
+
+| Attempt | Delay after the previous failure |
+| --- | --- |
+| 1 | immediate |
+| 2 | 2 s |
+| 3 | 4 s |
+| 4 | 30 min |
+| 5 | 1 h |
+| 6 | 2 h |
+| 7 | 4 h |
+| 8 | 8 h |
+| 9 | 24 h |
+| 10 | 48 h |
+
+After the last attempt the delivery is marked `failed`. The dashboard shows each delivery's status, attempt count, last HTTP result and next attempt time, and lets an owner, admin or project lead retry a failed delivery by hand, which restarts the schedule. An endpoint that is disabled pauses its deliveries; enabling it makes overdue ones eligible again. An endpoint added later does not receive events recorded before it existed.
+
+The payment's `webhookStatus` in the dashboard summarizes its deliveries: `pending` if any is pending, otherwise `failed` if any failed, otherwise `received`.
+
+## Handling deliveries
+
+- **Deduplicate on `X-Recv-Delivery`.** Delivery is at least once: your handler may run before a timeout or crash on the sending side makes the same delivery retry. Store the id before doing work, and answer 200 for an id you have already seen.
+- **Tolerate out-of-order events.** Retries of an old event can arrive after a newer one. Make decisions from `status` and the state you already hold, or read [Payment status](/api-integration/payments-api/payment-status/) after receiving an event.
+- **Answer quickly.** Queue the work and return 200; the 60 second timeout is the maximum, not a target.
+- **Do not trust the body alone for fulfillment.** The signature proves the body came from your install. Reading the status endpoint from your server proves the current state.
+- **Use `reference_id`, not `invoice_id`, as the key.** `invoice_id` is your label and may repeat.

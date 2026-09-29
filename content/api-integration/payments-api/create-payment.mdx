@@ -1,0 +1,79 @@
+---
+title: Create payment
+description: POST /api/v1/payment creates a payment for a customer and returns its reference id and checkout URL.
+---
+
+# Create payment
+
+```
+POST /api/v1/payment
+```
+
+Creates one payment for a USD amount and returns the checkout URL to send the customer to. The customer record is created or reused by `customerID`; the payment gets a new `reference_id` every time. No price lookup, address derivation or chain transaction happens at creation, so the call is fast and does not depend on an RPC node.
+
+Headers: `API-Key`, `Content-Type: application/json`.
+
+## Request
+
+```bash
+curl -X POST https://<your-site>/api/v1/payment \
+  -H "API-Key: 811b12035f0dfa8ffd62296df3c98b27" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerEmail": "a@example.com",
+    "customerID": "1234",
+    "amountInUSD": "50",
+    "invoiceID": "INV-0090",
+    "expire": "2026-09-30T12:00:00Z",
+    "currency": "USDC",
+    "network": "SOLANA"
+  }'
+```
+
+| Field | Type | Required | Constraints |
+| --- | --- | --- | --- |
+| `customerEmail` | string | yes | A valid email address, at most 320 characters. Stored lowercased and trimmed; an existing customer's email is updated. |
+| `customerID` | string | yes | Your identifier for the customer. Non-blank, at most 128 characters, trimmed. One customer per id per project. |
+| `amountInUSD` | string or number | yes | Positive. At most 18 integer digits and 6 fractional digits, decimal notation only (`"12.5"`, `12.5`). A JSON number is parsed without precision loss; use a string when your serializer cannot preserve large values. Exponent notation in a string is rejected. |
+| `invoiceID` | string | no | Your label for this payment. Non-blank, at most 128 characters. Echoed as `invoiceID` in status and `invoice_id` in webhooks. Not unique and not an idempotency key. |
+| `expire` | string | no | ISO 8601 date-time with a time part and a timezone (`Z` or `+hh:mm`), in the future. Default: now plus `payment.expiryHours` (24 hours; 1 to 8760). An open payment that reaches this time becomes `CANCELLED`. |
+| `currency` | string | no | Restrict the payment to one currency code (`^[A-Z0-9]{1,16}$`), for example `USDC`. Must be enabled for the project on an active chain of the install's network. If the code exists on more than one chain, `network` is required. |
+| `network` | string | no | `SOLANA` or `ROBINHOOD`. Restricts the payment to one chain. Requires `currency`. |
+
+A restriction fixes the currency and chain the customer can pay with; the checkout page and the deposit options endpoint show only that one. Without a restriction, the customer chooses among the project's enabled currencies whose chain has an active merchant registration.
+
+## Response
+
+`201 Created`
+
+```json
+{
+  "host": "https://pay.example.com",
+  "reference_id": "c80f5363-0397-4761-aa1a-3155c3a21470",
+  "url": "https://pay.example.com/payments?reference_id=c80f5363-0397-4761-aa1a-3155c3a21470&host=https%3A%2F%2Fpay.example.com"
+}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `host` | string | The site URL of this install, as configured under Settings. |
+| `reference_id` | string | Version 4 UUID identifying the payment in every other call and webhook. |
+| `url` | string | The hosted checkout page. `host` is URL-encoded in the query string. On a testnet install the URL ends with `&test=true`. |
+
+Creation also queues a `payment.open` webhook for every active endpoint of the project.
+
+## Errors
+
+| Status | `code` | Cause |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST` | A field fails validation (see constraints above); the body is not JSON or `Content-Type` is not `application/json`; `network` given without `currency`; the requested currency is not enabled for this project and network; the currency code exists on more than one chain and `network` is missing; `expire` is not in the future. |
+| 401 | `UNAUTHORIZED` | Invalid API key. |
+| 409 | `CONFLICT` | The customer with this `customerID` is inactive; or the install's site URL is not configured or invalid. |
+| 429 | `RATE_LIMITED` | Per-key limit exhausted. |
+| 503 | `UNAVAILABLE` | `payment.expiryHours` or the rate-limit setting is invalid, or Redis is unreachable. |
+
+## Notes
+
+- Merchant registration on chain is not required to create a payment, but a chain is offered at checkout only when the project has an active registration on it. See [Merchant registration](/onboarding-guide/merchant-registration/).
+- Concurrent requests for the same new `customerID` create one customer and one payment each.
+- The request, customer change, payment and webhook row are one transaction. A failure leaves nothing behind.

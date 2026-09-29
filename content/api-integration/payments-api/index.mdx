@@ -1,0 +1,37 @@
+---
+title: Overview
+description: The four payment endpoints and the payment webhook, what each one does and when to call it.
+---
+
+# Payments API
+
+A payment is a request for a USD amount from one customer. It is created by your server, paid by the customer on the hosted checkout page, through your own page built on the [checkout endpoints](/api-integration/checkout-endpoints/), or by a transfer to a deposit address, and reported back to you by webhook and by the status endpoint.
+
+All four endpoints take the `API-Key` header and are scoped to that key's project. See the [Introduction](/api-integration/introduction/) for authentication, errors and rate limits.
+
+| Method | Path | Purpose | Page |
+| --- | --- | --- | --- |
+| POST | `/api/v1/payment` | Create a payment and get the checkout URL. | [Create payment](/api-integration/payments-api/create-payment/) |
+| GET | `/api/v1/blockchain-currency/reference/{reference_id}` | List the currencies the customer can pay with, and any deposit address already assigned. | [Deposit options](/api-integration/payments-api/deposit-options/) |
+| POST | `/api/v1/deposit-address/reference/{reference_id}` | Derive the customer's permanent deposit address on a chain and select that chain for the payment. | [Assign deposit address](/api-integration/payments-api/assign-deposit-address/) |
+| GET | `/api/v1/payment/reference/{reference_id}` | Read the payment state, filled amounts and confirmation progress. | [Payment status](/api-integration/payments-api/payment-status/) |
+| POST to your URL | payment events | Signed delivery of every state change and every confirmation step. | [Payment webhook](/api-integration/payments-api/webhook/) |
+
+## Payment states
+
+| `paymentState` | Meaning |
+| --- | --- |
+| `OPEN` | Created, not yet paid. Expires at `expiresAt` unless paid. |
+| `PARTIALLY_FILLED` | Confirmed funds are below the requested amount by more than the fill tolerance (`payment.fillToleranceUsd`, default `0.01` USD). Does not expire; later transfers can still complete it. |
+| `FILLED` | Confirmed funds are within the tolerance of the requested amount. |
+| `OVER_FILLED` | Confirmed funds exceed the requested amount by more than the tolerance. |
+| `CANCELLED` | Expired while open, or cancelled from the dashboard. A transfer confirmed after cancellation still credits the payment and moves it to one of the filled states. |
+
+Amounts count only after the chain's confirmation threshold is reached. A transfer that is detected but not yet confirmed shows in `confirmationCurrent` and in `payment_info` of the webhook, and contributes no USD until confirmed.
+
+## Two ways a payment gets paid
+
+- **Wallet checkout.** The customer's wallet signs a transaction that calls the recv.fund program with the invoice id. The program moves the merchant share to your settlement wallet and the fee to the collector in the same transaction. Available for USDC, USDT and USDG, and for ETH on Robinhood Chain. Native SOL has no program pay instruction in this release and uses a deposit address instead.
+- **Deposit address.** The customer sends the token to their permanent per-chain address from any wallet or exchange. The watcher credits the newest eligible open payment of that customer. Funds rest at the address until a [sweep](/features/sweeps/) moves them to your settlement wallet, minus the fee.
+
+Both are described for customers in [Customer deposit wallets](/features/customer-deposit-wallets/) and [Payment links](/features/payment-links/).

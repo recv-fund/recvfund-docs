@@ -1,0 +1,63 @@
+---
+title: Sweeps
+description: "Moving customer deposit balances to your settlement wallet through the program: activation threshold, amount, count and time triggers, automatic scheduling, manual sweeps, the fee at sweep, execution and bookkeeping."
+---
+
+# Sweeps
+
+Funds sent to a customer deposit address stay there until a sweep. A sweep is a transaction, signed by the project's hot wallet, that calls the program's sweep function for one deposit address and one currency. The program sends the balance to your registered settlement wallet minus the fee, which goes to the fee collector in the same transaction. The program is the only path out of a deposit address, so the fee rate is set by the program, not by the server. On Solana a token sweep also closes the deposit token account. On Robinhood Chain the forwarder contract stays deployed for later sweeps.
+
+The hot wallet pays the network fee, so it needs SOL or ETH. Deactivating your checkout registration does not block sweeps. See [Funds sweeping](/onboarding-guide/funds-sweeping/) for the first run.
+
+## Settings
+
+**Sweeps** → **Automatic sweep settings** shows the project's values, or the install defaults when nothing is overridden. **Use installation defaults** clears the overrides. Owners, admins and project leads change settings; other roles read.
+
+| Field | Config key | Default | Range |
+| --- | --- | --- | --- |
+| Minimum eligible balance (USD) | `sweep.activationUsd` | 5 | Non-negative, at most six decimals |
+| Amount trigger (USD) | `sweep.amountUsd` | 50 | Positive |
+| Address count trigger | `sweep.addressCount` | 25 | 1 to 10000 |
+| Interval trigger (minutes) | `sweep.intervalMinutes` | 1440 | 1 to 525600 |
+| Enable automatic sweeps when the scheduler is available | `sweep.enabled` | on | |
+
+A balance of one currency at one address is eligible when its USD value reaches the minimum. Balances below it are ignored by the scheduler but can be swept manually.
+
+## Automatic scheduling
+
+While `watcher.enabled` is true, the scheduler runs once a minute. Each pass visits up to five active projects, oldest scan first, and one chain per project, and scans or revalidates up to 20 deposit addresses. Observations accumulate across passes, so a project with many addresses is covered over several minutes. The triggers are checked in this order:
+
+1. **Amount**: the eligible USD values across observed addresses on the chain add up to the amount trigger.
+2. **Count**: the number of distinct addresses with an eligible balance reaches the address count trigger.
+3. **Time**: the oldest address baseline is older than the interval. The baseline is the last sweep time, or the first funding time for an address never swept.
+
+Because scanning is paged and projects rotate, the interval is a trigger age, not a strict deadline. When a trigger fires, the observed group is rechecked with fresh balances and prices, and each still-eligible balance gets one queued sweep. Balances that emptied, dropped below the minimum or could not be priced are skipped and picked up in a later cycle. A pair that failed within the last hour is not requeued automatically; a manual request can retry it at once. Changing the settings discards the current observations. Turning automatic sweeps off stops new queueing but does not cancel sweeps already queued or signed.
+
+## Manual sweeps
+
+**Customer deposit balances** reads live balances when you ask for them, and shows per address and asset the balance, USD value and the automatic minimum. Each asset has a queue button. Owners, admins and project leads can queue; project managers and operators read. A manual sweep ignores the minimum and the enabled switch, but still needs a verified balance and a price; if any selected asset's balance or price cannot be read, nothing is queued. Zero balances are skipped. At most 100 addresses per request. Queueing an asset that already has a pending or sent sweep returns that sweep. The request only queues; the worker sends later.
+
+Balances below the automatic minimum, inactive currencies that the chain still supports, and inactive customers or addresses can all be swept manually, so funds are never stranded by configuration.
+
+## Execution
+
+A worker runs every `watcher.confirmationsIntervalSeconds` (default 15 seconds) while `watcher.enabled` is true and handles up to 20 queued sweeps per pass. Turning `watcher.enabled` off leaves queued sweeps pending. For each sweep it locks the project, hot wallet and sweep, decrypts the hot wallet key, re-derives the deposit address, checks the live registration, settlement wallet and balance, builds the program call (`sweep_token` or `sweep_sol` on Solana, `sweepToken` or `sweepNative` on Robinhood Chain), signs it and stores the signed transaction encrypted with its hash before any broadcast. One signed sweep or payout per wallet and chain is in flight at a time, and only one active sweep per deposit and currency.
+
+Broadcast goes to one RPC node with one attempt. If the response is lost, the worker resends the identical bytes; it never re-signs with a new nonce or blockhash. When the transaction is confirmed, the worker reads the program's `DepositSwept` event and replaces the estimated amounts with the actual gross amount and the fee the program collected. A confirmed on-chain failure marks the sweep `failed`. A missing hot wallet or a validation failure before signing produces a `failed` row without a hash. A signed transaction that cannot be found or proved stays unresolved for manual review.
+
+## History
+
+**Sweep history** lists sweeps with status, amount, **Program fee**, transaction and creation time, filterable by status. Pending and sent rows refresh every ten seconds.
+
+| Status | Meaning |
+| --- | --- |
+| `pending` | Queued, not yet signed or sent. |
+| `sent` | A broadcast attempt has begun, including an uncertain response. Not proof of inclusion. |
+| `confirmed` | The program event was verified. Amount and fee are actual. |
+| `failed` | Validation failed before signing, or the transaction failed on chain. |
+
+Each sweep records its trigger: `amount`, `count`, `time` or `manual`. Amounts are estimates until a confirmed event replaces them. The deposit address's last-swept time is updated on confirmation and feeds the time trigger. The USD value is the price stored when the sweep was prepared.
+
+## Not in this release
+
+Email alerts when the hot wallet runs low on SOL or ETH, operator resolution of a signed sweep whose outcome stays unknown, and reconciliation after a deep chain reorganisation are not implemented.

@@ -1,0 +1,56 @@
+---
+title: API keys
+description: Project API keys on the Developers page, the API-Key header, what a key can reach, revocation and the per-key rate limit.
+---
+
+# API keys
+
+Your own systems call the recv.fund API on your server with a project API key. The key identifies the project; every request is scoped to it. Keys are managed on the **Developers** page by owners, admins and project leads.
+
+## Creating a key
+
+**Create API key** takes a **Key name**, for example `Production integration`. The key is 32 hexadecimal characters (16 random bytes). It is shown once, on creation; copy it then. The server stores only a SHA-256 hash and a short prefix, so a lost key cannot be recovered. Create a new one instead.
+
+The **API keys** table shows Name, Prefix and Status. Each row has:
+
+- **Deactivate** / **Activate**: an inactive key is refused with the same `401` as an invalid key. Reactivating restores it.
+- **Delete**: removes the key. Applications using it lose access. The activity log keeps the key's past entries.
+
+Revocation is immediate. There is no positive authentication cache, and every write rechecks the key inside its transaction, so a key deactivated while a request is in flight cannot complete a write.
+
+## Using a key
+
+Send the key in the `API-Key` header with `Content-Type: application/json`:
+
+```
+API-Key: 811b12035f0dfa8ffd62296df3c98b27
+```
+
+The keyed routes are:
+
+| Route | Purpose |
+| --- | --- |
+| `POST /api/v1/payment` | [Create payment](/api-integration/payments-api/create-payment/) |
+| `GET /api/v1/blockchain-currency/reference/{reference_id}` | [Deposit options](/api-integration/payments-api/deposit-options/) |
+| `POST /api/v1/deposit-address/reference/{reference_id}` | [Assign deposit address](/api-integration/payments-api/assign-deposit-address/) |
+| `GET /api/v1/payment/reference/{reference_id}` | [Payment status](/api-integration/payments-api/payment-status/) |
+| `POST /api/v1/withdrawal/merchant`, `GET /api/v1/withdrawal/merchant`, `GET /api/v1/withdrawal/{id}/merchant` | [Payouts API](/api-integration/payouts-api/) |
+
+The [checkout endpoints](/api-integration/checkout-endpoints/) need no key.
+
+## Scope
+
+- A key reads and writes only its project. A payment or payout of another project returns `404`.
+- An inactive project makes all of its keys return `401`.
+- A key never grants dashboard access, and a dashboard session never substitutes for a key.
+- The dashboard API and the keyed API are separate surfaces; see [API integration](/api-integration/introduction/).
+
+The activity log records the key ID and project for keyed writes and denied reads, never the key itself.
+
+## Rate limit
+
+`rateLimit.publicApi.perMinute` (default 300, 1 to 10000) limits requests per key per minute, counted across all keyed routes. Exceeding it returns `429` with code `RATE_LIMITED`. The counter lives in Redis; if Redis is unavailable the keyed routes return `503` rather than allowing unlimited requests. The checkout endpoints have a separate per-IP limit, `rateLimit.checkout.perMinute` (default 120).
+
+## Not a project key
+
+`ADMIN_API_KEY` in `.env` is a different credential. It authenticates the two platform-configuration administration endpoints of the API through an `x-api-key` header and is not accepted on the routes above. See [Advanced setup](/deployment-guide/advanced-setup/).

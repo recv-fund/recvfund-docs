@@ -1,0 +1,21 @@
+---
+title: Features
+description: What the recv.fund dashboard, checkout page and API do, with one page per feature.
+---
+
+# Features
+
+recv.fund runs on your own server. It gives you a dashboard, a hosted checkout page at `/payments`, a JSON API with `API-Key` authentication, and signed webhooks. Customers pay either by signing a transaction that calls the on-chain program, which sends your share to your settlement wallet in the same transaction, or by sending stablecoins to a permanent deposit address derived from the program. Deposit balances are moved to your settlement wallet by sweeps. Payouts are sent from a hot wallet whose key is stored encrypted on your server. Everything below is scoped to a project, so one install can serve several brands.
+
+| Feature | What it covers |
+| --- | --- |
+| [Payment links](/features/payment-links/) | Creating payments from the dashboard or the API, the checkout page the customer sees, payment states, history and CSV export. |
+| [Customer deposit wallets](/features/customer-deposit-wallets/) | Permanent per-customer deposit addresses derived from the program, how deposits are credited, unmatched deposits and missed-payment rechecks. |
+| [Projects](/features/multi-brand-projects/) | Branding, enabled currencies, payout policy, API keys and webhook endpoints per project, and project-scoped roles. |
+| [API keys](/features/api-keys/) | Creating and revoking project keys, the `API-Key` header, scope and rate limits. |
+| [User management](/features/user-management/) | Roles, invitations with a temporary password, deactivation, session revocation and the activity log. |
+| [Analytics](/features/analytics/) | The overview page: confirmed receipts, date presets, first-time and returning payers. |
+| [Payouts](/features/payouts/) | Address book, payout requests, approval by email code, USD limits, execution from the hot wallet and payout webhooks. |
+| [Sweeps](/features/sweeps/) | Moving deposit balances to the settlement wallet: activation threshold, triggers, automatic scheduling and manual sweeps. |
+| [Webhooks](/features/webhooks/) | Endpoints per project, signature headers, retry schedule, delivery log and the `SEND_WEBHOOKS` switch. |
+| [Operator mode](/features/operator-mode/) | Planned. What one install can do today. |

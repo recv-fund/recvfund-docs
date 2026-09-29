@@ -19,7 +19,7 @@ One `docker compose` project, written to `/opt/recvfund` by the installer:
 | `api` | The server. Runs the public API, the dashboard API, the chain watchers, the sweep scheduler, payouts and webhook delivery. |
 | `web` | The dashboard and the hosted checkout page at `/payments`. |
 | `postgres` | The database. Optional: the installer can point the stack at an external Postgres instead. |
-| `redis` | Cache and queues. |
+| `redis` | Caches and rate-limit counters. Queues and job state are in Postgres. |
 
 Dashboard, checkout page and API share one origin, so there is no separate API port.
 
@@ -28,7 +28,7 @@ Dashboard, checkout page and API share one origin, so there is no separate API p
 - **Your settlement wallet.** Funds arrive at the address you registered on-chain. Only a transaction signed by your admin wallet can change it.
 - **Deposit addresses.** Each customer gets a permanent deposit address per chain. The address is derived from the on-chain program. No private key for it exists anywhere, on your server or ours.
 - **The one key on the server.** Your hot wallet. It pays transaction fees for sweeps and sends the payouts you approve. Its private key is entered once in the dashboard and stored encrypted with a key that only your server holds.
-- **The program.** The on-chain program can move funds only to your registered settlement wallet and to the fee collector. It has no pause or freeze function, so funds at a deposit address can always be swept.
+- **The program.** The on-chain program can move funds only to your registered settlement wallet and to the fee collector. Deactivating your registration blocks new checkout payments but never sweeps, so funds at a deposit address can always be moved to your settlement wallet.
 
 The service fee is a percentage per settlement, enforced by the on-chain program. The rate is read from the program and shown in your dashboard before you register.
 
@@ -39,7 +39,7 @@ The service fee is a percentage per settlement, enforced by the on-chain program
 | Solana | `SOLANA` | USDC, USDT, SOL |
 | Robinhood Chain | `ROBINHOOD` | USDG, ETH |
 
-Every install runs against either mainnet or the test networks (Solana devnet and Robinhood Chain testnet). You pick at install time.
+Every install runs against either mainnet or the test networks (Solana devnet and Robinhood Chain testnet). You pick at install time. On the test networks the tokens are USDC and SOL on Solana devnet, and USDG and ETH on Robinhood Chain testnet.
 
 ## Where to start
 

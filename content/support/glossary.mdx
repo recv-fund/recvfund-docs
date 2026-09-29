@@ -111,4 +111,3 @@ Terms are grouped by area. Where the dashboard, the API and the on-chain program
 | Webhook signature | The `X-Recv-Signature` header: `sha256=` followed by the HMAC-SHA256 of the raw request body, keyed with the endpoint secret. `X-Payram-Signature` carries the same value. |
 | Delivery | One attempt series for one event to one endpoint, identified by `X-Recv-Delivery`. Failed deliveries are retried on a fixed schedule; the last attempt and next attempt time are shown under Developers. |
 | Event type | The `X-Recv-Event` header value: `payment.confirming`, `payment.filled`, `payment.partially-filled`, `payment.over-filled`, `payment.cancelled`, and `payout.<status>` for payouts. |
-| Ticker | `GET /api/v1/ticker`, a public endpoint listing every active currency on the install's network with its chain code, token address, standard, decimals and current USD price. |

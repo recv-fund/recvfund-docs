@@ -19,11 +19,11 @@ Whichever method you pick, the result is the same `docker compose` project: Cadd
 
 | Requirement | Value |
 | --- | --- |
-| Operating system | Ubuntu 22.04 or newer, or another systemd Linux that runs Docker |
+| Operating system | Ubuntu, Debian, Linux Mint, CentOS, RHEL, Rocky Linux, AlmaLinux, Fedora, Arch Linux or Alpine Linux, on amd64 or arm64. macOS with Docker Desktop for local testing over plain HTTP only. |
 | CPU | 2 cores |
 | Memory | 4 GB |
-| Disk | 20 GB |
-| Ports | 80 and 443 free, or a reverse proxy in front (see `--http-port`) |
+| Disk | 20 GB recommended. The installer warns below 10 GB and asks before continuing below 5 GB. |
+| Ports | 80 and 443 free for Let's Encrypt, or one free port behind your own reverse proxy (see `--http-port`) |
 | Time | About ten minutes |
 
 The server needs outbound access to the chain RPC endpoints and, for mainnet prices of SOL and ETH, to CoinGecko.
@@ -37,7 +37,7 @@ Every install runs against one network type. Choose it at install time; it canno
 
 ## What to back up
 
-Two things: the database, and `/opt/recvfund/.env`. The `AES_ENCRYPTION_KEY` in that file decrypts every secret in the database, including hot wallet keys. If it is lost, hot wallets and stored secrets cannot be recovered. Deposit addresses and settlement are not affected, because no deposit keys exist.
+Three things: the database, the `api-uploads` volume (project logos), and `/opt/recvfund/.env`. The `AES_ENCRYPTION_KEY` in that file decrypts every secret in the database, including hot wallet keys. If it is lost, hot wallets and stored secrets cannot be recovered. Deposit addresses and settlement are not affected, because no deposit keys exist.
 
 ## After installing
 

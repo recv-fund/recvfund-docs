@@ -28,5 +28,8 @@
     "serve": "^14.2.4",
     "typescript": "^6.0.3"
   },
-  "packageManager": "yarn@1.22.22"
+  "packageManager": "yarn@1.22.22",
+  "resolutions": {
+    "zod": "4.1.12"
+  }
 }

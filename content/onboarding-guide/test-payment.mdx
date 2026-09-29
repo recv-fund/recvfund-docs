@@ -1,0 +1,86 @@
+---
+title: Test payment
+description: Creating a customer and a payment link in the dashboard, what the customer sees on the checkout page, how the payment is credited and confirmed, and what the dashboard shows.
+---
+
+# Test payment
+
+This page walks through one payment end to end. On a testnet install it costs nothing but test tokens; on mainnet, use a small amount.
+
+Before you start: an active registration on at least one chain, at least one currency of that chain enabled for the project under Projects → Enabled currencies, and the site URL set under Installation.
+
+## 1. Create a customer
+
+Every payment belongs to a customer. Open Customers (`/customers`), select the project in the sidebar and use "Create customer": Customer email, and optionally Customer ID, your own identifier for this person. If you leave the ID blank the server generates one of the form `cust_` followed by 12 hexadecimal characters. IDs are unique within a project.
+
+The customer's row shows Requested and Received totals and a count of deposit addresses, which starts at 0. Addresses are assigned when the customer picks a chain at checkout, not when the customer is created.
+
+## 2. Create a payment link
+
+Open Payments (`/payment-links`) with the project selected and fill in "Create payment link":
+
+| Field | Notes |
+| --- | --- |
+| Find customer | Type part of the email or customer ID; matching customers of the project appear in the Customer list. |
+| Customer | Pick one. |
+| Amount (USD) | A positive amount with up to 6 decimal places. All invoices are denominated in USD; the token amount is quoted at checkout. |
+| Invoice ID (optional) | Your own label. It is shown to the customer and searchable, but it is not unique. |
+
+Press "Create link". The link appears in a "Payment link" field with a "Copy link" button. It has the form `https://pay.example.com/payments?reference_id=<uuid>`, where the UUID is the invoice's reference. The invoice starts in state `open` and expires after 24 hours by default (`payment.expiryHours`). An expired open invoice is cancelled by a scheduler that runs every minute.
+
+Links can also be created from your own systems with the API; see [Payments API](/api-integration/payments-api/). The checkout page is the same.
+
+## 3. What the customer sees
+
+Open the link in a browser, or in a second browser profile with the paying wallet. The checkout page does not use your dashboard session; it is public.
+
+At the top: the recv.fund wordmark and, on a testnet install, a "Testnet" badge. Then the project's logo and name, "Payment request", the amount in USD, the invoice ID if you set one, "Status: open" with the amount received so far, and the expiry time. The page reloads its status every 5 seconds.
+
+**Choosing a currency.** The "Pay with" list contains one entry per enabled currency whose chain has an active registration, as `USDC · Solana` or `USDG · Robinhood Chain`. A native currency whose price cannot be fetched is listed as "Price unavailable" and cannot be selected. If the list is empty the page says "No payment currencies are available. Contact the merchant."; go back to the checklist in the [Introduction](/onboarding-guide/introduction/).
+
+**Getting a quote.** The customer picks a currency and presses "Get payment details". The server assigns the customer's deposit address on that chain (permanent for this customer and chain, derived from your registration), converts the remaining USD amount into token units at the current price, rounding up, and stores a quote. The page then shows "Send 10 USDC" (or whatever the amount is), "Use Solana. Send only USDC to this address.", a QR code of the address, the address itself with "Copy address", and the quote expiry, 5 minutes by default (`payment.quoteTtlSeconds`), shorter if the invoice expires first or a native price ages out. Stablecoin quotes are 1 USD per token. After expiry the page says "This quote has expired. Get payment details again before sending."; the address does not change, only the quoted amount may.
+
+**Paying.** There are two ways, and the currency decides which are offered:
+
+- *Send to the deposit address.* Works for every currency, from any wallet or exchange withdrawal. The customer sends the quoted amount to the address on the chosen network. This is the only option for SOL, which the checkout marks as "Pay this currency by sending to the deposit address above."
+- *Pay with browser wallet.* Offered for USDC and USDT on Solana and for USDG and ETH on Robinhood Chain. The customer connects an injected wallet and the page lists the wallet steps: a single pay step on Solana or for ETH; for USDG an approval step followed by the payment when the current allowance is too small. Each step is signed in the wallet. After the last step the page submits the transaction hash to the server for verification and shows "Transaction submitted. Payment status updates after network verification." or, when the server could already credit it, "Payment confirmed on the network."
+
+A wallet payment calls the program's `pay` instruction, which sends your share to the settlement wallet and the fee to the fee collector in the same transaction. A deposit sits at the deposit address until it is swept; the fee is taken at sweep time. Either way the customer's wallet pays the network fee ("Network fees are paid by your wallet.").
+
+When the invoice is filled the page shows "Payment received." and, if the project has a success redirect URL, a "Return to merchant" link.
+
+## 4. How the payment is credited
+
+Nothing the browser sends marks an invoice paid. The watchers read the chain:
+
+- A wallet payment is found either from the hash the checkout page submitted or by the program-event watcher, which polls the program every 10 seconds.
+- A deposit is found by the deposit watcher, which scans each active deposit address every 15 seconds in rotation.
+
+A found transfer is recorded as `detected` and contributes nothing until it has the required confirmations: 1 on Solana, 12 blocks on Robinhood Chain by default. The confirmation worker rechecks every 15 seconds. Once confirmed, the transfer is valued in USD at the price observed at detection and the invoice's received amount is updated. The invoice becomes `filled` when the received amount is within 0.01 USD of the requested amount (`payment.fillToleranceUsd`), `partially-filled` below, `over-filled` above. A later deposit can move a partially filled invoice to filled, even after its expiry.
+
+A deposit is matched to the customer's newest open or partially filled invoice. A deposit with no eligible invoice is still recorded and shown under the customer as an unmatched transfer; it counts in the customer's Received total and can be swept.
+
+## 5. What the dashboard shows
+
+**Payments.** The summary line counts Total, Open or partial, Filled and Cancelled. The history table lists Invoice, Requested, Received, Status and Created, with "View payment" and, for open invoices, "Cancel payment". "View payment" opens the details: the checkout link, the Transactions table (Hash, USD, Status `detected` or `confirmed`) and the Webhook events sent for this invoice, if the project has webhook endpoints. Use the Status filter, the search box or "Export CSV".
+
+**Customers.** "View customer" shows the deposit addresses now assigned (Chain, Address, Status, Deposit scan: the last scan time or the current scan error), the customer's payments and the transactions with their USD value and status. A scan error here usually means the RPC node cannot serve the request; see [Node configuration](/onboarding-guide/node-configuration/).
+
+**Overview** (`/dashboard`) includes the payment once it is confirmed.
+
+If a transfer you can see on a block explorer does not appear within a few minutes, open Missed payments (`/payments/missed`) and submit its hash; the server rechecks it against the customer's addresses.
+
+## Test mode
+
+Test mode is the installation's network type, chosen at install time and not switchable without a reset. On a testnet install:
+
+- The dashboard header shows a "Testnet" badge, the checkout page shows the same badge, and every invoice carries a test flag in the API.
+- The chains are Solana devnet and Robinhood Chain testnet. The currencies are USDC and SOL on devnet, USDG and ETH on Robinhood Chain testnet.
+- The paying wallet needs test tokens from a faucet; see [Networks](/support/networks/).
+- The program address you configure must be the one deployed on the test network.
+
+Everything else, including registration, sweeps and payouts, works the same way as on mainnet.
+
+## Next
+
+[Funds sweeping](/onboarding-guide/funds-sweeping/): move the deposit you just made to your settlement wallet.

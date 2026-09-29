@@ -1,0 +1,59 @@
+---
+title: Hot wallet
+description: The one private key the server holds - generating or importing it, how it is stored, assigning it to projects, reading balances, funding it, and what it pays for.
+---
+
+# Hot wallet
+
+Open Hot wallets in the sidebar (`/wallets/hot`). Owners and admins can generate, import, enable and disable wallets; project leads can see the wallets already assigned to their projects and assign them.
+
+## What it is for
+
+The hot wallet is the only private key stored on your server. It does two jobs:
+
+- **Sweeps.** When a customer's deposit balance is moved to your settlement wallet, the hot wallet signs that transaction and pays its network fee. Registration writes the hot wallet address on-chain as the merchant's sweeper, so only this wallet can call `sweep` for your merchant record, and the program can send the funds only to your registered settlement wallet and the fee collector.
+- **Payouts.** Approved payouts are sent from the hot wallet, so it must hold the tokens you intend to pay out as well as native currency for the fee.
+
+Customer funds do not pass through it. Checkout payments go straight to your settlement wallet, and deposits sit at the customer's deposit address until swept. Deposit addresses have no private key anywhere; they are derived from the on-chain program and your registration.
+
+One hot wallet belongs to one chain family: `solana` (Solana) or `evm` (Robinhood Chain). A wallet can serve several projects, and each project has at most one wallet per family.
+
+## Generate or import
+
+Two forms at the bottom of the page, for owners and admins only.
+
+**Generate hot wallet.** Wallet name and Chain family, then "Generate wallet". The server creates the key, encrypts it and returns only the derived address.
+
+**Import hot wallet.** Wallet name, Chain family and Private key, then "Import wallet". Accepted formats: a 0x-prefixed 32-byte hexadecimal key for `evm`; a 64-byte keypair as a JSON array for `solana` (the format Solana CLI writes). The input clears after a successful import and the key is never shown again.
+
+Either way the key is encrypted with AES-256-GCM under the `AES_ENCRYPTION_KEY` from `/opt/recvfund/.env` before it is written to the database. The API never returns it, there is no export, and neither valid nor invalid key input is logged. Back up the database and the `.env` file: if `AES_ENCRYPTION_KEY` is lost, the wallet cannot be recovered from the database. If you imported a key, keep your own copy of it as well.
+
+## The wallet table
+
+| Column | Content |
+| --- | --- |
+| Name | The name you gave it, with the chain family underneath. |
+| Address | The public address. Balances appear here after "Load balances". |
+| Projects | The projects it is assigned to, or "Unassigned". |
+| Status | Active or Inactive. |
+| Actions | "Load balances", "Assign to selected project", "Disable" or "Enable". |
+
+**Load balances** reads the live native and token balances from the RPC pool and prices them: stablecoins at 1 USD, SOL and ETH from the configured price provider. If pricing fails the amount is still shown with "USD price unavailable"; if the RPC read fails the request errors rather than showing zero. The list itself makes no RPC calls, so balances are only as fresh as your last click.
+
+**Assign to selected project** appears when a single project is selected in the sidebar workspace selector and the wallet is not yet assigned to it. Only active wallets can be assigned. Assigning replaces the project's previous wallet of the same family. The first assignment of a new wallet must be made by an owner or admin.
+
+**Disable** stops the wallet from being assigned or used for new sweep and payout broadcasts; transactions already sent are still confirmed. Balances of an inactive wallet remain readable.
+
+Assignment is a database setting. If a project already has an active registration and you assign a different wallet, the on-chain sweeper does not change by itself: prepare an "Update sweeper" transaction on the Registrations page and sign it with the merchant admin wallet. Until then the program still accepts sweeps only from the old address.
+
+## Funding
+
+Send native currency to the address shown: SOL on Solana, ETH on Robinhood Chain. It pays one network fee per sweep transaction (one transaction per deposit address and asset) and per payout. For payouts, also send the tokens you will pay out. On testnet, use the network's faucet; see [Networks](/support/networks/).
+
+There is no fixed minimum. Keep enough for the sweeps you expect between top-ups. A sweep that fails before signing because the wallet cannot cover the fee shows up as a failed row on the Sweeps page with its reason; automatic retries of that address wait an hour, and a manual queue can retry at once.
+
+Low-balance email alerts are not available in this release. Check the balance with "Load balances" as part of your routine.
+
+## Next
+
+[Merchant registration](/onboarding-guide/merchant-registration/): put the settlement wallet and this sweeper on-chain.

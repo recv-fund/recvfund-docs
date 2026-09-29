@@ -1,0 +1,56 @@
+---
+title: Introduction
+description: What onboarding covers, the order of the steps, what you need before you start, and what an installation needs before it can accept a payment.
+---
+
+# Onboarding guide
+
+This guide takes a fresh installation from the signup page to a confirmed test payment and a first sweep. It assumes the server is installed and healthy; see the [Deployment guide](/deployment-guide/introduction/) if it is not.
+
+Everything below happens in the dashboard. Nothing in this guide requires shell access to the server except a restart, and the installer does that for you.
+
+## The steps
+
+| Step | Page | What it does |
+| --- | --- | --- |
+| 1 | [Root account setup](/onboarding-guide/root-account-setup/) | Create the owner account and first project at `/signup`, sign in, set the site URL and email delivery, invite teammates. |
+| 2 | [Node configuration](/onboarding-guide/node-configuration/) | Enter the recv.fund program address for each network, check the RPC nodes, review the currency catalog. |
+| 3 | [Hot wallet](/onboarding-guide/hot-wallet/) | Generate or import the one key the server holds, assign it to the project, fund it with SOL or ETH. |
+| 4 | [Merchant registration](/onboarding-guide/merchant-registration/) | Register the project on-chain with your browser wallet: settlement wallet, sweeper, active flag. |
+| 5 | [Test payment](/onboarding-guide/test-payment/) | Create a customer and a payment link, pay it, watch it confirm. |
+| 6 | [Funds sweeping](/onboarding-guide/funds-sweeping/) | Move deposit balances to the settlement wallet, automatically or by hand. |
+
+The hot wallet comes before registration because registration writes the hot wallet address on-chain as the merchant's sweeper. The dashboard refuses to prepare a registration until an active hot wallet is assigned to the project for that chain family.
+
+Steps 2, 3 and 4 repeat for every chain you want to accept payments on. Step 4 also repeats for every project.
+
+## What you need
+
+| Item | Why |
+| --- | --- |
+| The signup URL printed by the installer | It is `https://<your site>/signup`. It works only until the first account exists. |
+| A browser wallet with a little SOL or ETH | Registration is an on-chain transaction signed in your browser. Solana: Phantom, Solflare or another injected Solana wallet. Robinhood Chain: MetaMask or another injected EVM wallet. This wallet becomes the merchant admin key; keep it. WalletConnect is not available in this release, so use a desktop browser with a wallet extension. |
+| A settlement wallet address per chain | The address that receives your funds. Only a transaction signed by the merchant admin wallet can change it later. |
+| The recv.fund program address for each network | Entered once under Nodes. The server verifies the address against the program build it ships with. |
+| An SMTP server | Payout approval codes are sent by email. Payments and sweeps do not need email. Configure it early so the test email and payouts work when you get to them. |
+| Native currency for the hot wallet | The hot wallet pays the network fee of every sweep and sends payouts. On testnet, use a faucet. |
+
+On testnet installs the chains are Solana devnet and Robinhood Chain testnet, and every payment carries a test flag. See [Networks](/support/networks/) for the networks, chain IDs and explorers.
+
+## What "ready to accept payments" means
+
+A chain being listed in the dashboard does not enable checkout on it. For a project to accept a payment on a chain, all of the following must be true:
+
+| Requirement | Where |
+| --- | --- |
+| The program address for that network is configured and verified | Nodes → Deployed program |
+| The project has an active merchant registration on that chain | Registrations |
+| At least one currency of that chain is enabled for the project | Projects → Enabled currencies |
+| A hot wallet for the chain family is assigned to the project | Hot wallets |
+| The site URL is set | Installation → Site URL (needed to generate payment links) |
+
+The checkout page lists only currencies whose chain has an active registration for the project. If the list is empty, the customer sees "No payment currencies are available."
+
+## Who can do what
+
+The owner account created at signup can do everything. If you invite teammates, note that only owners and admins can manage nodes, generate or import hot wallets and change installation settings. Project leads can assign an existing hot wallet, register on-chain, create payment links and queue sweeps for their projects. See [User management](/features/user-management/) for the full role table.

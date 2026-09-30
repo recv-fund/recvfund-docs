@@ -62,7 +62,15 @@ These are application defaults, not statements about chain finality. A project c
 
 ## Program addresses
 
-The install does not ship with a program or registry address. The address of the recv.fund program on your network is entered under Settings, Nodes. The server checks the code at that address against the build it supports and reads the fee rates and the fee cap from it before accepting it. After any merchant registration has started, the program address cannot be replaced, because existing deposit addresses depend on it.
+The install does not ship with a program or registry address. The address of the recv.fund program on your network is entered under Settings, Nodes.
+
+| Chain | Network | Address to enter |
+| --- | --- | --- |
+| Solana | devnet | `G9u3a8P6T5RFsgQhjVC5Yw7oAUqURst5MQJi1rFVkzAt` |
+| Robinhood Chain | testnet (46630) | `0xBe4E003224977110100463EcC70D399bA0f1c9F8` |
+
+Both test deployments charge 75 basis points on checkout payments and 100 on sweeps. The mainnet program and registry are not deployed yet.
+ The server checks the code at that address against the build it supports and reads the fee rates and the fee cap from it before accepting it. After any merchant registration has started, the program address cannot be replaced, because existing deposit addresses depend on it.
 
 ## Test funds
 

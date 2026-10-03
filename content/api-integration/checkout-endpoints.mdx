@@ -13,8 +13,8 @@ All four are rate limited per client IP address by `rateLimit.checkout.perMinute
 | --- | --- | --- |
 | GET | `/api/v1/checkout/{reference_id}` | Payment summary, branding, available currencies with prices, the current selection and quote. |
 | POST | `/api/v1/checkout/{reference_id}/select` | Select a currency: assigns the deposit address for its chain and creates a quote (exact token amount). |
-| POST | `/api/v1/checkout/{reference_id}/payTransaction` | Build the unsigned transaction(s) for a wallet payment against the current quote. |
-| POST | `/api/v1/checkout/{reference_id}/confirm` | Submit a transaction hash for verification on chain. |
+| POST | `/api/v1/checkout/{reference_id}/payTransaction` | Build the unsigned transfer to the customer's deposit address for a wallet payment against the current quote. |
+| POST | `/api/v1/checkout/{reference_id}/confirm` | Submit a transaction hash for verification on chain and credit it to this payment. |
 
 Unlike the keyed endpoints, these use camelCase keys and lowercase states.
 
@@ -66,7 +66,7 @@ curl https://<your-site>/api/v1/checkout/c80f5363-0397-4761-aa1a-3155c3a21470
       "decimals": 9,
       "priceUsd": "142.310000000000",
       "priceUnavailable": false,
-      "walletPayment": false
+      "walletPayment": true
     }
   ],
   "selected": {
@@ -104,7 +104,7 @@ curl https://<your-site>/api/v1/checkout/c80f5363-0397-4761-aa1a-3155c3a21470
 | `currencies[].decimals` | integer | Decimal places. |
 | `currencies[].priceUsd` | string or null | Current USD price, twelve decimals; `null` when unavailable. Stablecoins are exactly `1.000000000000`. |
 | `currencies[].priceUnavailable` | boolean | `true` when the price provider gave no fresh quote; the currency cannot be selected until it does. |
-| `currencies[].walletPayment` | boolean | `true` when `payTransaction` is supported. `false` for native SOL, which is paid by transfer to the deposit address only. |
+| `currencies[].walletPayment` | boolean | `true` when `payTransaction` is supported. In this release it is `true` for every currency, native SOL and ETH included. |
 | `selected` | object or null | Present once a chain has been selected (here or through the keyed assign endpoint). |
 | `selected.address` | string | The address to pay: the token account for SPL tokens, the deposit address otherwise. |
 | `selected.quoteId` | string or null | Current quote id, needed by `payTransaction`. `null` after the keyed assign endpoint selected a chain without a currency. |
@@ -149,7 +149,7 @@ Errors:
 
 ## POST `/api/v1/checkout/{reference_id}/payTransaction`
 
-Builds the unsigned transaction(s) a wallet must sign to pay through the recv.fund program. Requires the current quote.
+Builds the one unsigned transaction a wallet must sign to pay: a plain transfer of the quoted amount from `payer` to the customer's deposit address on the selected chain. No recv.fund contract or program instruction is called, there is no approval step, and no fee is taken; the full amount arrives at the deposit address and the fee is taken later, when the address is swept. Requires the current quote.
 
 ```bash
 curl -X POST https://<your-site>/api/v1/checkout/c80f5363-0397-4761-aa1a-3155c3a21470/payTransaction \
@@ -176,19 +176,10 @@ curl -X POST https://<your-site>/api/v1/checkout/c80f5363-0397-4761-aa1a-3155c3a
   "transactions": [
     {
       "kind": "evm",
-      "purpose": "Approve invoice amount",
-      "from": "0x9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c",
-      "to": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "data": "0x095ea7b3…",
-      "value": "0",
-      "chainId": "46630"
-    },
-    {
-      "kind": "evm",
       "purpose": "Pay invoice",
-      "from": "0x9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c",
-      "to": "0x1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d",
-      "data": "0x…",
+      "from": "0x9F8e7D6c5B4a39281706F5E4D3c2B1a09f8e7D6c",
+      "to": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+      "data": "0xa9059cbb…",
       "value": "0",
       "chainId": "46630"
     }
@@ -199,28 +190,28 @@ curl -X POST https://<your-site>/api/v1/checkout/c80f5363-0397-4761-aa1a-3155c3a
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `quoteId`, `expiresAt` | string | The quote the transactions were built for. |
-| `transactions[]` | array | Ordered steps. Have the wallet sign and send each one, and wait for inclusion, before the next. |
+| `transactions[]` | array | Always one element in this release. It is an array so that a client handles every step the same way: have the wallet sign and send it, then call `confirm` with its hash. |
 | `transactions[].kind` | string | `evm` or `solana`. |
-| `transactions[].purpose` | string | Label for the step: `Reset token allowance` (only when an existing allowance must be cleared first), `Approve invoice amount`, `Pay invoice`. Native ETH payments have a single `Pay invoice` step. |
+| `transactions[].purpose` | string | `Pay invoice`. |
 | `transactions[].from` | string | The payer. |
-| `transactions[].to`, `transactions[].data`, `transactions[].value`, `transactions[].chainId` | string | Present for `evm`: the call target, calldata, native value in wei and the chain id, as strings. |
-| `transactions[].serializedTransaction`, `transactions[].lastValidBlockHeight` | string | Present for `solana`: the base64 serialized transaction to sign and the block height until which it is valid. |
+| `transactions[].to`, `transactions[].data`, `transactions[].value`, `transactions[].chainId` | string | Present for `evm`: the target, calldata, native value in wei and the chain id, as strings. For ERC-20 (USDG) `to` is the token contract and `data` is `transfer(depositAddress, amount)`; for ETH `to` is the deposit address, `data` is `0x` and `value` is the amount. |
+| `transactions[].serializedTransaction`, `transactions[].lastValidBlockHeight` | string | Present for `solana`: the base64 serialized transaction to sign and the block height until which it is valid. For SOL it contains a System Program transfer to the deposit address. For an SPL token it contains `createAssociatedTokenAccountIdempotent` for the deposit address's token account, paid by the payer, followed by `transferChecked` from the payer's token account. |
 
-The approval step is bounded to the invoice amount. The pay step calls the program with the invoice id derived from the reference id; the program splits the transfer between your settlement wallet and the fee collector in the same transaction. A wallet may sign the transaction after the quote expires; whatever lands on chain is credited at its verified amount.
+The customer's wallet pays the network fee. A wallet may sign the transaction after the quote expires; whatever lands on chain is credited at its verified amount.
 
 Errors:
 
 | Status | `code` | Cause |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST` | Field validation; the amount exceeds the chain's supported range; the currency has no wallet payment (native SOL: use the deposit address). |
+| 400 | `BAD_REQUEST` | Field validation, including an invalid `payer` address; the amount exceeds the chain's supported range; the project has no active merchant registration on this chain. |
 | 404 | `NOT_FOUND` | Unknown reference id. |
-| 409 | `CONFLICT` | Project or customer inactive; payment closed or expired; `currencyID` or `quoteId` do not match the current quote, or the quote expired (select again); the currency has become unavailable; the remaining balance changed since the quote; the merchant registration is inactive; the invoice was already paid on this chain. |
+| 409 | `CONFLICT` | Project or customer inactive; payment closed or expired; `currencyID` or `quoteId` do not match the current quote, or the quote expired (select again); the currency has become unavailable; the remaining balance changed since the quote; the payment changed while the transaction was built (refresh); the merchant registration in the database differs from its on-chain state. |
 | 429 | `RATE_LIMITED` | Per-IP limit exhausted. |
 | 503 | `UNAVAILABLE` | The RPC pool could not build the transaction. |
 
 ## POST `/api/v1/checkout/{reference_id}/confirm`
 
-Tells the server about a transaction hash so it can verify it on chain now instead of waiting for automatic discovery. The server reads the transaction from its RPC pool, matches program events to this invoice and merchant, and records the transfer. It never trusts an amount or a success claim from the client.
+Tells the server about a transaction hash so it can verify it on chain now instead of waiting for the deposit watcher. Requires that a currency on the given chain is already selected for the payment. The server reads the transaction from its RPC pool, checks that it contains a transfer of the selected currency to the customer's deposit address on that chain, and records each such transfer as a deposit (kind `deposit`). When the server records a transfer for the first time, it binds the transfer to this payment. If the deposit watcher recorded the same transfer first, the payment the watcher matched is kept. The server never trusts an amount or a success claim from the client.
 
 ```bash
 curl -X POST https://<your-site>/api/v1/checkout/c80f5363-0397-4761-aa1a-3155c3a21470/confirm \
@@ -230,7 +221,7 @@ curl -X POST https://<your-site>/api/v1/checkout/c80f5363-0397-4761-aa1a-3155c3a
 
 | Field | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| `chainID` | integer | yes | The `chainId` of the currency paid with, at least 1. |
+| `chainID` | integer | yes | The `chainId` of the currency paid with, at least 1. Must equal `selected.chainId`. |
 | `txHash` | string | yes | Transaction hash or Solana signature, at most 128 characters. |
 
 `200 OK`
@@ -244,15 +235,15 @@ curl -X POST https://<your-site>/api/v1/checkout/c80f5363-0397-4761-aa1a-3155c3a
 | `state` | string | The payment state after recording: `open`, `partially-filled`, `filled`, `over-filled` or `cancelled`. Stays `open` until the chain's confirmation threshold is reached; the confirmation worker moves it on. |
 | `filledAmountUsd` | string | Confirmed USD amount after this call. |
 
-Repeating the call for the same hash is safe and returns the current state. The call also works after the quote has expired or the payment has been cancelled.
+Repeating the call for the same hash is safe and returns the current state; a transfer is recorded once. The call also works after the quote has expired or the payment has been cancelled. A transfer that is never confirmed through this endpoint (sent from an exchange, a QR code or a copied address) is found by the deposit watcher and matched to the customer's newest open or partially filled payment under `payment.unmatchedDepositPolicy` (default `credit-latest-open`).
 
 Errors:
 
 | Status | `code` | Cause |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST` | Field validation; no merchant registration on this chain; the transaction is unknown, failed, or contains no payment event for this invoice and merchant. |
+| 400 | `BAD_REQUEST` | Field validation; no currency is selected on `chainID`; the customer has no deposit address on this chain; the transaction is invalid, failed, or contains no transfer of the selected currency to the deposit address. |
 | 404 | `NOT_FOUND` | Unknown reference id. |
-| 409 | `CONFLICT` | The event's token is not in the chain catalog. |
+| 409 | `CONFLICT` | The transaction is not yet included or confirmed (retry later); the merchant registration on this chain is unavailable; the transfer conflicts with one already recorded. |
 | 429 | `RATE_LIMITED` | Per-IP limit exhausted. |
 | 503 | `UNAVAILABLE` | RPC or price lookup unavailable; nothing is recorded. |
 
@@ -260,8 +251,8 @@ Errors:
 
 1. `GET` the checkout. If `available` is `false` or `state` is not `open` or `partially-filled`, show the state and stop.
 2. Show `currencies[]`; hide entries with `priceUnavailable`. Offer a wallet button only where `walletPayment` is `true`.
-3. On choice, `POST select`. Show `selected.address` and `selected.amount` (and a QR code of the address) for a transfer, or call `payTransaction` and hand the steps to the wallet.
-4. After each wallet step is sent, call `confirm` with its hash. Poll `GET` every few seconds for `state` and `filledAmountUsd`; the per-IP limit of 120 per minute allows a five second interval with margin.
+3. On choice, `POST select`. Show `selected.address` and `selected.amount` (and a QR code of the address) for a transfer, or call `payTransaction` and hand the transaction to the wallet. Both lead to the same deposit address.
+4. After the wallet sends the transaction, call `confirm` with its hash. Poll `GET` every few seconds for `state` and `filledAmountUsd`; the per-IP limit of 120 per minute allows a five second interval with margin.
 5. When `state` leaves `open`, show the result. Your server learns the same through the [webhook](/api-integration/payments-api/webhook/) and confirms with [Payment status](/api-integration/payments-api/payment-status/).
 
-WalletConnect and ERC-20 `permit` flows are not implemented in this release; the hosted page uses injected browser wallets.
+WalletConnect is not implemented in this release; the hosted page uses injected browser wallets.

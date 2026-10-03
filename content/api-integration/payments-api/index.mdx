@@ -31,7 +31,9 @@ Amounts count only after the chain's confirmation threshold is reached. A transf
 
 ## Two ways a payment gets paid
 
-- **Wallet checkout.** The customer's wallet signs a transaction that calls the recv.fund program with the invoice id. The program moves the merchant share to your settlement wallet and the fee to the collector in the same transaction. Available for USDC, USDT and USDG, and for ETH on Robinhood Chain. Native SOL has no program pay instruction in this release and uses a deposit address instead.
-- **Deposit address.** The customer sends the token to their permanent per-chain address from any wallet or exchange. The watcher credits the newest eligible open payment of that customer. Funds rest at the address until a [sweep](/features/sweeps/) moves them to your settlement wallet, minus the fee.
+Both end at the customer's permanent per-chain deposit address. No fee is taken when the customer pays; funds rest at the address until a [sweep](/features/sweeps/) moves them to your settlement wallet, minus the fee.
+
+- **Wallet checkout.** The customer's wallet signs one plain transfer of the quoted amount to their deposit address, built by the checkout page. No recv.fund contract or program instruction runs. Available for every currency, SOL included. When the checkout page submits the transaction hash, the transfer is credited to the payment being paid.
+- **Deposit address.** The customer sends the token to their deposit address from any wallet or exchange. The deposit watcher credits the newest eligible open payment of that customer.
 
 Both are described for customers in [Customer deposit wallets](/features/customer-deposit-wallets/) and [Payment links](/features/payment-links/).

@@ -93,12 +93,12 @@ Flow: `OPEN` → one `payment.confirming` per confirmation step → `FILLED`, `P
 | `payment_info` | array | Up to 100 transfers recorded against this payment, oldest first, including transfers not yet confirmed. |
 | `payment_info[].source_address` | string | Sending address. |
 | `payment_info[].transaction_hash` | string | Transaction hash or Solana signature. |
-| `payment_info[].destination_address` | string | Receiving address. For a wallet checkout payment this is the program address. |
+| `payment_info[].destination_address` | string | Receiving address: the customer's deposit address, or for an SPL token its token account. A wallet checkout payment is a transfer to the same address. |
 | `payment_info[].block_number` | integer | Block or slot. |
-| `payment_info[].kind` | string | `deposit` (transfer to a deposit address) or `checkout-pay` (wallet checkout through the program). |
+| `payment_info[].kind` | string | `deposit`. Every transfer, including a wallet checkout payment, is a transfer to a deposit address. The value `checkout-pay` belonged to the superseded program payment path and is not written by this release. |
 | `payment_info[].currency_id` | integer | Catalog id of the transferred currency. |
-| `payment_info[].amount_raw` | string | Transferred amount in base units of that currency (gross, before fee). |
-| `payment_info[].fee_raw` | string or null | Program fee in base units for `checkout-pay`; `null` for deposits, whose fee is taken at sweep. |
+| `payment_info[].amount_raw` | string | Transferred amount in base units of that currency. The full amount arrives at the deposit address. |
+| `payment_info[].fee_raw` | string or null | `null`. No fee is taken when a customer pays; the fee is taken at sweep. |
 | `payment_info[].status` | string | `detected`, `confirmed` or `orphaned`. |
 | `confirmation_current` | integer | For `payment.confirming`, the transfer's new count. Otherwise the lowest count across transfers, `0` with none. |
 | `confirmation_required` | integer | The chain's threshold, `0` when no chain is set. |

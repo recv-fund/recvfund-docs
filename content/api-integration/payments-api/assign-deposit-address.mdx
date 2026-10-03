@@ -47,7 +47,7 @@ curl -X POST https://<your-site>/api/v1/deposit-address/reference/c80f5363-0397-
 | --- | --- | --- |
 | `id` | integer | Deposit address record id. |
 | `createdAt` | string | ISO 8601 time the address was first assigned. Earlier than the request when the address already existed. |
-| `Address` | string | The canonical deposit account: the program-derived address (PDA) on Solana, the CREATE2 forwarder address on Robinhood Chain. For native SOL and ETH this is where the customer sends funds. |
+| `Address` | string | The canonical deposit account: the program-derived address (PDA) on Solana, the CREATE2 address computed by your merchant contract on Robinhood Chain. For native SOL and ETH this is where the customer sends funds. |
 | `Family` | string | `solana` or `evm`. |
 | `Status` | string | `active` or `dormant`. |
 | `MemberID` | integer | Internal customer id (not your `customerID`). |
@@ -75,5 +75,5 @@ Assignment selects only the chain. It does not select a currency and does not cr
 ## Notes
 
 - Repeating the call with the same chain is safe and returns the same address. Repeating it with a different chain clears any checkout quote and selected currency on the payment; after a transfer has been detected the chain can no longer change.
-- The address is derived from the on-chain program and the customer's stored reference; the merchant registration on that chain must be active. No private key for the address exists anywhere.
+- The address is derived from your on-chain merchant registration and the customer's stored reference; the merchant registration on that chain must be active. No private key for the address exists anywhere.
 - No transaction is sent, and no funds move, by this call. Funds arriving at the address are detected by the deposit watcher and credited when confirmed; they are moved to your settlement wallet by a [sweep](/features/sweeps/).

@@ -41,12 +41,12 @@ The "Sweep history" table lists every sweep of the project: Sweep number with th
 | --- | --- |
 | `pending` | Queued, not yet signed or broadcast. |
 | `sent` | A broadcast attempt was made. Not yet proof of inclusion. |
-| `confirmed` | The program's sweep event was verified with the required confirmations. Amount and Program fee are replaced by the actual values from the event. |
+| `confirmed` | The sweep's `DepositSwept` event was verified with the required confirmations. Amount and Program fee are replaced by the actual values from the event. |
 | `failed` | Rejected before signing (for example no assigned active hot wallet, or the deposit is empty) or the transaction failed on-chain. The reason is shown under the status. |
 
 Amounts are estimates until a sweep is confirmed; until then the fee column reads "Awaiting receipt".
 
-## What the hot wallet pays and what the program takes
+## Network fee and recv.fund fee
 
 Two different costs apply to every sweep:
 

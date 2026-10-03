@@ -22,7 +22,7 @@ The chain code is what the API uses in `network` and `blockchainCode` fields. Ro
 
 The seeded endpoints are public and free. They are active and not marked preferred. You can add up to ten nodes per chain under Settings, Nodes, mark one as preferred, and remove or disable the seeded ones. Every read validates the node's chain id (EVM) or genesis hash (Solana) before use, so a node on the wrong network cannot supply balances. Reads fall back to the next node on failure; signing and broadcasting use one node and never fall back. See [Node configuration](/onboarding-guide/node-configuration/).
 
-Nodes must retain the history the watchers need to catch up after downtime. On Robinhood Chain, native ETH deposit discovery requires a node that supports `debug_traceTransaction` and `debug_traceBlockByHash` with the call tracer; ERC-20 deposits and checkout payments do not.
+Nodes must retain the history the watchers need to catch up after downtime. On Robinhood Chain, crediting native ETH, whether sent to a deposit address by hand or paid from a connected wallet at checkout, requires a node that supports `debug_traceTransaction` and `debug_traceBlockByHash` with the call tracer; ERC-20 payments do not.
 
 ## Tokens
 
@@ -46,8 +46,8 @@ Each project chooses which of these currencies to offer at checkout. A currency 
 
 SOL and ETH have two roles.
 
-- Transaction fees. Every sweep and payout is signed by the project's hot wallet, which pays the network fee in the native coin. Keep the hot wallet funded. On Solana, the first token deposit for a customer also needs rent for the deposit token account, which the sender's wallet normally pays; the sweep closes that account and returns the rent to the hot wallet.
-- Payment currencies. Both can be enabled for a project. ETH can be paid from a connected wallet (the registry's `payNative`) or sent to a deposit address. The Solana program has no direct SOL checkout instruction, so SOL is accepted through deposit addresses only.
+- Transaction fees. Every sweep and payout is signed by the project's hot wallet, which pays the network fee in the native coin. Keep the hot wallet funded. On Robinhood Chain the first sweep of a deposit address also deploys its forwarder contract, which costs more gas than later sweeps. On Solana, the first token deposit for a customer also needs rent for the deposit token account, which the sender's wallet normally pays (a wallet payment from the checkout page creates the account itself); the sweep closes that account and returns the rent to the hot wallet.
+- Payment currencies. Both can be enabled for a project. Both can be paid from a connected wallet on the checkout page, as a plain transfer to the customer's deposit address, or sent to that address from any wallet or exchange.
 
 Prices for SOL and ETH come from CoinGecko, cached for 60 seconds by default. The stablecoins are priced at exactly 1.00 USD.
 
@@ -62,15 +62,20 @@ These are application defaults, not statements about chain finality. A project c
 
 ## Program addresses
 
-The install does not ship with a program or registry address. The address of the recv.fund program on your network is entered under Settings, Nodes.
+The install does not ship with a program or factory address. The address for your network is entered under Settings, Nodes, in "Program or registry address": the program ID on Solana, the `RecvFundFactory` contract address on Robinhood Chain. Each merchant then creates its own merchant contract through that factory when it registers.
 
-| Chain | Network | Address to enter |
-| --- | --- | --- |
-| Solana | devnet | `G9u3a8P6T5RFsgQhjVC5Yw7oAUqURst5MQJi1rFVkzAt` |
-| Robinhood Chain | testnet (46630) | `0xBe4E003224977110100463EcC70D399bA0f1c9F8` |
+| Chain | Network | What | Address to enter | Fee for new registrations | Fee collector |
+| --- | --- | --- | --- | --- | --- |
+| Solana | devnet | `recvfund` program | `FAZUvvc2anrhgkP6sVczAHp2wkFCfhzpFcbiBt1mVM8J` | 100 bps, taken at sweep | `GStZmhS72eX1euYiwQY9MaxahBopDBLGwfTtXPge3DK` |
+| Robinhood Chain | testnet (46630) | `RecvFundFactory` contract | `0xDc055613c64a39ea6a9a2ad8c15D587381A12f8c` | 100 bps, taken at sweep | `0x74520411b6349b1A79f504D9b4717238Dbade236` |
 
-Both test deployments charge 75 basis points on checkout payments and 100 on sweeps. The mainnet program and registry are not deployed yet.
- The server checks the code at that address against the build it supports and reads the fee rates and the fee cap from it before accepting it. After any merchant registration has started, the program address cannot be replaced, because existing deposit addresses depend on it.
+Both were deployed on 2026-10-03. The fee rate and fee collector shown are the terms a registration made now receives; a registration keeps the terms it was created with. The Solana devnet program's config account is `5uLBoziU1on7DmPDyYPobgZhkFeWtjy91GW3HGWxFLcT`. The devnet program still has an upgrade authority, so treat it as provisional; the server refuses a mainnet program that has one. The Robinhood Chain contracts have no proxy and cannot be upgraded, and the factory source is verified on the Robinhood Chain testnet explorer.
+
+The mainnet program and factory are not deployed yet.
+
+Superseded, do not use: the Robinhood Chain testnet registry `0xBe4E003224977110100463EcC70D399bA0f1c9F8` and the Solana devnet program `G9u3a8P6T5RFsgQhjVC5Yw7oAUqURst5MQJi1rFVkzAt`, both deployed on 2026-09-30. They took a fee on checkout payments as well as on sweeps and are not accepted by the current server build.
+
+The server checks the code at the address against the build it supports and reads the fee terms for new registrations and the fee cap before accepting it. After any merchant registration has started, the address cannot be replaced, because existing deposit addresses depend on it.
 
 ## Test funds
 

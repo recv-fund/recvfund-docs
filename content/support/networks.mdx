@@ -22,7 +22,7 @@ The chain code is what the API uses in `network` and `blockchainCode` fields. Ro
 
 The seeded endpoints are public and free. They are active and not marked preferred. You can add up to ten nodes per chain under Settings, Nodes, mark one as preferred, and remove or disable the seeded ones. Every read validates the node's chain id (EVM) or genesis hash (Solana) before use, so a node on the wrong network cannot supply balances. Reads fall back to the next node on failure; signing and broadcasting use one node and never fall back. See [Node configuration](/onboarding-guide/node-configuration/).
 
-Nodes must retain the history the watchers need to catch up after downtime. On Robinhood Chain, crediting native ETH, whether sent to a deposit address by hand or paid from a connected wallet at checkout, requires a node that supports `debug_traceTransaction` and `debug_traceBlockByHash` with the call tracer; ERC-20 payments do not.
+Nodes must retain the history the watchers need to catch up after downtime. On Robinhood Chain, ETH sent directly to a deposit address, by hand or from a connected wallet at checkout, is credited through any node. ETH that a smart contract (for example some exchange wallets) forwards to a deposit address inside another transaction is credited only through a node that supports `debug_traceTransaction` and `debug_traceBlockByHash` with the call tracer; the public Robinhood Chain endpoint and some providers' free plans do not. ERC-20 payments need neither.
 
 ## Tokens
 

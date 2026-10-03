@@ -235,7 +235,7 @@ curl -X POST https://<your-site>/api/v1/checkout/c80f5363-0397-4761-aa1a-3155c3a
 | `state` | string | The payment state after recording: `open`, `partially-filled`, `filled`, `over-filled` or `cancelled`. Stays `open` until the chain's confirmation threshold is reached; the confirmation worker moves it on. |
 | `filledAmountUsd` | string | Confirmed USD amount after this call. |
 
-Repeating the call for the same hash is safe and returns the current state; a transfer is recorded once. The call also works after the quote has expired or the payment has been cancelled. A transfer that is never confirmed through this endpoint (sent from an exchange, a QR code or a copied address) is found by the deposit watcher and matched to the customer's newest open or partially filled payment under `payment.unmatchedDepositPolicy` (default `credit-latest-open`).
+Repeating the call for the same hash is safe and returns the current state; a transfer is recorded once. The call also works after the quote has expired or the payment has been cancelled. A transfer that is never confirmed through this endpoint (sent from an exchange, a QR code or a copied address) is found by the deposit watcher and, under `payment.unmatchedDepositPolicy` (default `credit-latest-open`), matched to the open or partially filled payment whose current quote has the same currency and exact amount, otherwise to the customer's newest open or partially filled payment.
 
 Errors:
 

@@ -34,6 +34,6 @@ Amounts count only after the chain's confirmation threshold is reached. A transf
 Both end at the customer's permanent per-chain deposit address. No fee is taken when the customer pays; funds rest at the address until a [sweep](/features/sweeps/) moves them to your settlement wallet, minus the fee.
 
 - **Wallet checkout.** The customer's wallet signs one plain transfer of the quoted amount to their deposit address, built by the checkout page. No recv.fund contract or program instruction runs. Available for every currency, SOL included. When the checkout page submits the transaction hash, the transfer is credited to the payment being paid.
-- **Deposit address.** The customer sends the token to their deposit address from any wallet or exchange. The deposit watcher credits the newest eligible open payment of that customer.
+- **Deposit address.** The customer sends the token to their deposit address from any wallet or exchange. The deposit watcher credits the customer's open payment whose current quote has the same currency and exact amount, otherwise the customer's newest eligible open payment.
 
 Both are described for customers in [Customer deposit wallets](/features/customer-deposit-wallets/) and [Payment links](/features/payment-links/).

@@ -65,7 +65,7 @@ Each state is sent once as a webhook. The checkout page asks for an exact token 
 
 An `OPEN` payment past its expiry (24 hours by default) becomes `CANCELLED` and a `payment.cancelled` webhook is sent. The checkout page no longer offers a quote or a wallet payment for it.
 
-Funds can still arrive afterwards. A wallet payment whose hash the checkout page submits for that payment, or a transfer that was already detected before cancellation, is credited to the cancelled payment and can move it to a filled state. Any other new deposit to the customer's address after cancellation is not matched to a cancelled payment; it is credited to the customer's newest open payment if there is one, or recorded as an unmatched deposit under the customer. Unmatched deposits are swept like any other balance.
+Funds can still arrive afterwards. A wallet payment whose hash the checkout page submits for that payment, or a transfer that was already detected before cancellation, is credited to the cancelled payment and can move it to a filled state. Any other new deposit to the customer's address after cancellation is not matched to a cancelled payment; it is credited to an open payment of the customer if there is one (preferring one whose current quote has the same currency and exact amount, otherwise the newest), or recorded as an unmatched deposit under the customer. Unmatched deposits are swept like any other balance.
 
 ## How do refunds work?
 

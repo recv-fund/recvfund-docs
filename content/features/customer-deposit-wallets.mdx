@@ -45,14 +45,14 @@ A transfer is credited only from proof read from the chain: the server re-derive
 
 | Policy | Behaviour |
 | --- | --- |
-| `credit-latest-open` (default) | The transfer goes to the customer's newest eligible payment: one that is `open` and unexpired, or `partially-filled`. If the payment restricts the chain or currency, the transfer must match. The first matched transfer sets the payment's currency, chain and deposit address, so the customer does not have to open the checkout page before sending. |
+| `credit-latest-open` (default) | The transfer goes to an eligible payment (`open` and unexpired, or `partially-filled`). The server first looks for one whose current quote has the transfer's currency and exact amount, which is the payment a wallet checkout paid even if the watcher sees the transfer before the page confirms it; otherwise it takes the customer's newest eligible payment. If the payment restricts the chain or currency, the transfer must match. The first matched transfer sets the payment's currency, chain and deposit address, so the customer does not have to open the checkout page before sending. |
 | `leave-unmatched` | Every deposit is recorded without a payment. |
 
 `filled`, `over-filled` and `cancelled` payments never receive new matches. When no eligible payment exists, the transfer is stored as an unmatched deposit: it has no payment, stays visible in the customer's history through its deposit address, counts in the customer's **Received** total and in [Analytics](/features/analytics/), and is swept like any other balance. The binding is fixed at first detection: replaying an old unmatched transfer never pays a payment created later, and a transfer matched before its payment was cancelled still credits that payment.
 
 Deposits follow the confirmation and valuation rules in [Payment links](/features/payment-links/#confirmations-and-valuation). The transfer's fee is recorded as null because the fee is taken at sweep time.
 
-A wallet payment from the checkout page is a deposit like any other, with one difference: when the page submits its hash and the server records the transfer for the first time, the transfer is credited to the payment that was being paid, not to the customer's newest open payment. If the deposit watcher recorded the transfer first, the watcher's match is kept, and the checkout confirmation returns a conflict when that match is not the payment being paid. A transfer in any supported currency is recorded even if that currency has since been disabled for the project.
+A wallet payment from the checkout page is a deposit like any other, with one difference: when the page submits its hash and the server records the transfer for the first time, the transfer is credited to the payment that was being paid, whatever other payments are open. If the deposit watcher recorded the transfer first, the watcher's match is kept, and the checkout confirmation returns a conflict when that match is not the payment being paid. A transfer in any supported currency is recorded even if that currency has since been disabled for the project.
 
 ## Missed-payment reports
 

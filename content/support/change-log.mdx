@@ -45,7 +45,7 @@ On 2026-10-03 the test network deployments were replaced by the payment model de
 
 - Payment links from the dashboard and `POST /api/v1/payment` from the API, with USD amounts, optional currency and network restriction, and expiry.
 - Hosted checkout page with currency selection, exact quotes, deposit address and QR code, and wallet payment for every currency, SOL included. A wallet payment is one plain transfer from the customer's wallet to the customer's deposit address; no recv.fund contract or program instruction runs and no fee is taken.
-- Deposit discovery per address and currency with resumable progress, matching to the customer's newest eligible payment, and unmatched deposits kept under the customer. A wallet payment whose hash the checkout page submits is credited to the payment that was paid; one the page never reports is found by deposit discovery.
+- Deposit discovery per address and currency with resumable progress, matching to the eligible payment whose quote has the same currency and exact amount, otherwise the customer's newest eligible payment, and unmatched deposits kept under the customer. A wallet payment whose hash the checkout page submits is credited to the payment that was paid; one the page never reports is found by deposit discovery.
 - Confirmation tracking with `payment.confirming` progress events, fill tolerance, and the states `OPEN`, `PARTIALLY_FILLED`, `FILLED`, `OVER_FILLED` and `CANCELLED`.
 - Missed payment reports: submit a transaction hash for verification and credit.
 - Payment history with search, filters, detail and CSV export.

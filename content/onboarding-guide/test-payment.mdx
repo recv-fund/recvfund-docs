@@ -42,10 +42,10 @@ At the top: the recv.fund wordmark and, on a testnet install, a "Testnet" badge.
 
 **Paying.** There are two ways, and the currency decides which are offered:
 
-- *Send to the deposit address.* Works for every currency, from any wallet or exchange withdrawal. The customer sends the quoted amount to the address on the chosen network. This is the only option for SOL, which the checkout marks as "Pay this currency by sending to the deposit address above."
-- *Pay with browser wallet.* Offered for USDC and USDT on Solana and for USDG and ETH on Robinhood Chain. The customer connects an injected wallet and the page lists the wallet steps: a single pay step on Solana or for ETH; for USDG an approval step followed by the payment when the current allowance is too small. Each step is signed in the wallet. After the last step the page submits the transaction hash to the server for verification and shows "Transaction submitted. Payment status updates after network verification." or, when the server could already credit it, "Payment confirmed on the network."
+- *Send to the deposit address.* Works for every currency, from any wallet or exchange withdrawal. The customer sends the quoted amount to the address on the chosen network.
+- *Pay with browser wallet.* Offered for every currency: USDC, USDT and SOL on Solana, USDG and ETH on Robinhood Chain. The customer connects an injected wallet and the page shows one wallet step, "1. Pay invoice". The customer signs it in the wallet. The page then submits the transaction hash to the server for verification and shows "Transaction submitted. Payment status updates after network verification." or, when the server could already credit it, "Payment confirmed on the network."
 
-A wallet payment calls the program's `pay` instruction, which sends your share to the settlement wallet and the fee to the fee collector in the same transaction. A deposit sits at the deposit address until it is swept; the fee is taken at sweep time. Either way the customer's wallet pays the network fee ("Network fees are paid by your wallet.").
+Both ways end in the same place. A wallet payment is one plain transfer of the quoted amount from the customer's wallet to the customer's deposit address: an ERC-20 `transfer` or an ETH transfer on Robinhood Chain, a SOL transfer or an SPL token transfer on Solana. There is no approval step, no recv.fund contract or program instruction runs, and no fee is taken; the full amount arrives at the deposit address. For an SPL token the same transaction first creates the deposit address's token account if it does not exist yet, paid by the customer's wallet. The funds stay at the deposit address until they are swept, and the fee is taken at sweep time. Either way the customer's wallet pays the network fee ("Network fees are paid by your wallet.").
 
 When the invoice is filled the page shows "Payment received." and, if the project has a success redirect URL, a "Return to merchant" link.
 
@@ -53,12 +53,12 @@ When the invoice is filled the page shows "Payment received." and, if the projec
 
 Nothing the browser sends marks an invoice paid. The watchers read the chain:
 
-- A wallet payment is found either from the hash the checkout page submitted or by the program-event watcher, which polls the program every 10 seconds.
-- A deposit is found by the deposit watcher, which scans each active deposit address every 15 seconds in rotation.
+- A wallet payment is verified at once from the hash the checkout page submitted. If the page never submits it, the deposit watcher finds it like any other deposit.
+- Any other transfer to a deposit address is found by the deposit watcher, which scans the active deposit addresses every 15 seconds in rotation.
 
 A found transfer is recorded as `detected` and contributes nothing until it has the required confirmations: 1 on Solana, 12 blocks on Robinhood Chain by default. The confirmation worker rechecks every 15 seconds. Once confirmed, the transfer is valued in USD at the price observed at detection and the invoice's received amount is updated. The invoice becomes `filled` when the received amount is within 0.01 USD of the requested amount (`payment.fillToleranceUsd`), `partially-filled` below, `over-filled` above. A later deposit can move a partially filled invoice to filled, even after its expiry.
 
-A deposit is matched to the customer's newest open or partially filled invoice. A deposit with no eligible invoice is still recorded and shown under the customer as an unmatched transfer; it counts in the customer's Received total and can be swept.
+A wallet payment confirmed through the checkout page is credited to the invoice that was paid, provided the server records the transfer first; if the deposit watcher recorded it first, the watcher's match is kept. Every other deposit is matched to the customer's newest open or partially filled invoice. A deposit with no eligible invoice is still recorded and shown under the customer as an unmatched transfer; it counts in the customer's Received total and can be swept.
 
 ## 5. What the dashboard shows
 

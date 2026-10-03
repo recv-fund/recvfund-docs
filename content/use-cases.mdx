@@ -7,7 +7,7 @@ description: Who recv.fund is built for and what each kind of business gets from
 
 ## Apps on Robinhood Chain
 
-Take USDG from Robinhood users and receive it in your own wallet. Robinhood Chain is the first chain recv.fund supports. Your checkout page builds a transaction that calls the program's `pay` function; the customer signs it in their wallet, and the merchant share lands in your settlement wallet in the same transaction.
+Take USDG from Robinhood users and receive it in your own wallet. Robinhood Chain is the first chain recv.fund supports. Your checkout page builds one plain token transfer from the customer's wallet to the customer's deposit address; the customer signs it in their wallet. Your server credits the payment once the transfer is confirmed and sweeps the balance to your settlement wallet.
 
 What you use: the hosted checkout page or the [Payments API](/api-integration/payments-api/), webhooks, and the dashboard.
 

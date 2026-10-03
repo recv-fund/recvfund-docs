@@ -1,22 +1,22 @@
 ---
 title: Customer deposit wallets
-description: Permanent per-customer deposit addresses derived from the on-chain program, how deposits are found and credited, unmatched deposits, missed-payment rechecks and customer history.
+description: Permanent per-customer deposit addresses derived from your on-chain merchant registration, how deposits are found and credited, unmatched deposits, missed-payment rechecks and customer history.
 ---
 
 # Customer deposit wallets
 
-Every customer of a project gets one permanent deposit address per chain. The customer can send any amount to it, from any wallet or exchange, at any time. Your server watches the address, credits the funds to the customer's newest open payment, and [sweeps](/features/sweeps/) the balance to your settlement wallet.
+Every customer of a project gets one permanent deposit address per chain. Every payment the customer makes goes to it: a wallet payment from the checkout page is a transfer to this address, and the customer can also send any amount to it from any wallet or exchange, at any time. Your server watches the address, credits the funds to a payment, and [sweeps](/features/sweeps/) the balance to your settlement wallet. No fee is taken when funds arrive.
 
 ## Addresses are derived, not generated
 
-The address is computed from the on-chain program, your merchant registration and the customer's random reference. No private key for it exists anywhere.
+The address is computed from your merchant registration and the customer's random reference. No private key for it exists anywhere.
 
 | Chain | Derivation | Where tokens go |
 | --- | --- | --- |
-| Solana | A program-derived address (PDA) from the program ID, your merchant ID and the customer reference. | SPL tokens go to the mint's associated token account (ATA) owned by that PDA. The PDA itself receives SOL. |
-| Robinhood Chain | A CREATE2 forwarder address computed by the registry contract. | Tokens and ETH go to the forwarder address. It is deployed by the program when the balance is swept. |
+| Solana | A program-derived address (PDA) with seeds `deposit`, your merchant account and the customer reference. | SPL tokens go to the mint's associated token account (ATA) owned by that PDA. The PDA itself receives SOL. |
+| Robinhood Chain | A CREATE2 address computed by your merchant contract (`MerchantVault`) from the customer reference. | Tokens and ETH go to that address. It is valid before anything is deployed there; your merchant contract deploys a forwarder contract at the address on its first sweep. |
 
-The program can move funds from a deposit address only to your registered settlement wallet and the fee collector. Deactivating your checkout registration does not block sweeps.
+Funds at a deposit address can move only to your registered settlement wallet and to the fee collector recorded in your registration, and only through a sweep. Deactivating your registration does not block sweeps. On Robinhood Chain the server can derive deposit addresses only after your merchant contract exists, that is, after the registration is confirmed.
 
 An address is assigned the first time the customer selects that chain on the checkout page, or when your system calls [Assign deposit address](/api-integration/payments-api/assign-deposit-address/). Assignment requires an active customer, project and merchant registration on that chain; the server checks the live registration state before storing the address. The same address is reused for every later payment by that customer on that chain. Assignment is not a dashboard action. On Solana the API returns the PDA; the receiving address for an SPL token is the currency-specific `customerAddress` from [Deposit options](/api-integration/payments-api/deposit-options/).
 
@@ -50,7 +50,9 @@ A transfer is credited only from proof read from the chain: the server re-derive
 
 `filled`, `over-filled` and `cancelled` payments never receive new matches. When no eligible payment exists, the transfer is stored as an unmatched deposit: it has no payment, stays visible in the customer's history through its deposit address, counts in the customer's **Received** total and in [Analytics](/features/analytics/), and is swept like any other balance. The binding is fixed at first detection: replaying an old unmatched transfer never pays a payment created later, and a transfer matched before its payment was cancelled still credits that payment.
 
-Deposits follow the same confirmation and valuation rules as checkout payments ([Payment links](/features/payment-links/#confirmations-and-valuation)). The transfer's fee is recorded as null because the program collects the fee at sweep time. A transfer in any supported currency is recorded even if that currency has since been disabled for the project.
+Deposits follow the confirmation and valuation rules in [Payment links](/features/payment-links/#confirmations-and-valuation). The transfer's fee is recorded as null because the fee is taken at sweep time.
+
+A wallet payment from the checkout page is a deposit like any other, with one difference: when the page submits its hash and the server records the transfer for the first time, the transfer is credited to the payment that was being paid, not to the customer's newest open payment. If the deposit watcher recorded the transfer first, the watcher's match is kept. A transfer in any supported currency is recorded even if that currency has since been disabled for the project.
 
 ## Missed-payment reports
 
@@ -59,8 +61,7 @@ If a customer sent funds and nothing was credited, report the transaction under 
 A worker checks the ten least recently checked open reports per pass, on the same interval and switch as confirmations. For each report it:
 
 1. Verifies the transaction and its confirmation depth. Unknown or unconfirmed transactions, and RPC nodes without the history, leave the report `open` with a retry message. A confirmed failed transaction makes it `rejected`.
-2. Checks for a program `pay` event matching your merchant ID and a known payment, and credits it through the normal path.
-3. Rechecks the customer's addresses and currencies against the transaction, ten address and currency pairs per pass, ignoring the automatic scan's starting height. This recovers a transfer sent before the address was assigned, or to an address or currency that was inactive.
+2. Rechecks the customer's addresses and currencies against the transaction, ten address and currency pairs per pass, ignoring the automatic scan's starting height. This recovers a transfer sent before the address was assigned, or to an address or currency that was inactive.
 
 A confirmed transfer recorded for the project makes the report `credited`, including a deposit kept without a payment. A confirmed transaction with a complete, error-free scan and no matching transfer is `rejected`; add the missing address or currency and resubmit, which reopens the report. Open rows on the page refresh every ten seconds.
 

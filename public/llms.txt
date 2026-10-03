@@ -29,7 +29,7 @@
 
 - [Features](https://docs.recv.fund/features/): What the recv.fund dashboard, checkout page and API do, with one page per feature.
 - [Payment links](https://docs.recv.fund/features/payment-links/): Creating payments from the dashboard or the API, what a payment carries, its states, the checkout page the customer sees, partial and over payment, expiry, history and CSV export.
-- [Customer deposit wallets](https://docs.recv.fund/features/customer-deposit-wallets/): Permanent per-customer deposit addresses derived from the on-chain program, how deposits are found and credited, unmatched deposits, missed-payment rechecks and customer history.
+- [Customer deposit wallets](https://docs.recv.fund/features/customer-deposit-wallets/): Permanent per-customer deposit addresses derived from your on-chain merchant registration, how deposits are found and credited, unmatched deposits, missed-payment rechecks and customer history.
 - [Projects](https://docs.recv.fund/features/multi-brand-projects/): One install, several brands. Each project has its own branding, enabled currencies, payout policy, API keys, webhook endpoints, hot wallet assignment and team membership.
 - [API keys](https://docs.recv.fund/features/api-keys/): Project API keys on the Developers page, the API-Key header, what a key can reach, revocation and the per-key rate limit.
 - [User management](https://docs.recv.fund/features/user-management/): The five roles, inviting members with a temporary password, forced password change, deactivation, session revocation and the activity log.

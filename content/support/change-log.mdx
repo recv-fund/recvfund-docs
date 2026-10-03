@@ -9,7 +9,9 @@ Short release notes are on the [What's new](/whats-new/) page. This page is the 
 
 ## 2026-09: Initial release
 
-The first public release of recv.fund.
+The first public release of recv.fund. The mainnet factory and program are not deployed yet, so payments can be taken only on the test networks.
+
+On 2026-10-03 the test network deployments were replaced by the payment model described below: customers pay their deposit address directly, the fee is taken only at sweep and is fixed per registration, and registration is one transaction. The Robinhood Chain testnet registry `0xBe4E003224977110100463EcC70D399bA0f1c9F8` and the Solana devnet program `G9u3a8P6T5RFsgQhjVC5Yw7oAUqURst5MQJi1rFVkzAt`, both deployed on 2026-09-30, are superseded. The current addresses are listed under [Networks and tokens](/support/networks/#program-addresses).
 
 ### Chains and tokens
 
@@ -34,17 +36,16 @@ The first public release of recv.fund.
 
 ### On-chain registration and wallets
 
-- Merchant registration per project per chain, signed in the browser with an injected wallet. The signing wallet becomes the admin; the settlement wallet and the sweeper are recorded on-chain.
-- Settlement wallet, sweeper and active-flag updates, prepared by the server and signed by the admin wallet.
+- Merchant registration per project per chain in one transaction, signed in the browser with an injected wallet. The signing wallet becomes the admin; the cold wallet (settlement address), the sweeper, the fee rate and the fee collector are recorded on-chain. On Robinhood Chain the transaction creates the merchant's own contract (`MerchantVault`) through the recv.fund factory; on Solana it creates the merchant account of the recv.fund program.
+- Settlement wallet, sweeper and active-flag updates, prepared by the server and signed by the admin wallet. The fee rate and fee collector of a registration cannot be changed.
 - Hot wallets per chain family, generated or imported in the dashboard and stored encrypted. Balance reads on request.
-- Deposit addresses derived from the program (Solana PDA, Robinhood Chain CREATE2). No deposit keys on the server.
+- Deposit addresses derived from the merchant registration (Solana PDA, Robinhood Chain CREATE2 address of the merchant contract). No deposit keys on the server.
 
 ### Payments
 
 - Payment links from the dashboard and `POST /api/v1/payment` from the API, with USD amounts, optional currency and network restriction, and expiry.
-- Hosted checkout page with currency selection, exact quotes, deposit address and QR code, and wallet payment through the program for SPL tokens, ERC-20 tokens and native ETH.
-- Program-event discovery per chain with a resumable cursor, so checkout payments are credited even when the browser never reports the hash.
-- Deposit discovery per address and currency with resumable progress, matching to the customer's newest eligible payment, and unmatched deposits kept under the customer.
+- Hosted checkout page with currency selection, exact quotes, deposit address and QR code, and wallet payment for every currency, SOL included. A wallet payment is one plain transfer from the customer's wallet to the customer's deposit address; no recv.fund contract or program instruction runs and no fee is taken.
+- Deposit discovery per address and currency with resumable progress, matching to the customer's newest eligible payment, and unmatched deposits kept under the customer. A wallet payment whose hash the checkout page submits is credited to the payment that was paid; one the page never reports is found by deposit discovery.
 - Confirmation tracking with `payment.confirming` progress events, fill tolerance, and the states `OPEN`, `PARTIALLY_FILLED`, `FILLED`, `OVER_FILLED` and `CANCELLED`.
 - Missed payment reports: submit a transaction hash for verification and credit.
 - Payment history with search, filters, detail and CSV export.
@@ -53,7 +54,8 @@ The first public release of recv.fund.
 
 - Automatic sweeps per project and chain with an activation threshold and amount, count and time triggers.
 - Manual sweeps of selected addresses and currencies.
-- Signed transactions are stored before broadcast and confirmed from the program's sweep event.
+- One fee, at most 2%, taken only at sweep at the rate fixed in the registration. If the fee collector cannot receive the fee, it goes to the settlement wallet and the sweep completes.
+- Signed transactions are stored before broadcast and confirmed from the `DepositSwept` event.
 
 ### Payouts
 
@@ -74,8 +76,8 @@ The first public release of recv.fund.
 
 ### Not in this release
 
-- WalletConnect and EIP-2612 `permit` on the checkout page and in registration. Only injected browser wallets are supported.
-- A direct SOL checkout instruction. SOL is accepted through deposit addresses.
+- WalletConnect on the checkout page and in registration. Only injected browser wallets are supported.
+- Mainnet deployments of the Robinhood Chain factory and the Solana program.
 - Low-balance email alerts for hot wallets.
 - Operator mode (one install serving several merchants with a markup).
 - Automatic reconciliation after a deep chain reorganisation.

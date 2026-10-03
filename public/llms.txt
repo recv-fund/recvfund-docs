@@ -53,7 +53,7 @@
 
 ## Support
 
-- [Glossary](https://docs.recv.fund/support/glossary/): Terms as recv.fund uses them in the dashboard, the API, the on-chain program and this documentation.
+- [Glossary](https://docs.recv.fund/support/glossary/): Terms as recv.fund uses them in the dashboard, the API, the on-chain program and contracts, and this documentation.
 - [Networks and tokens](https://docs.recv.fund/support/networks/): The chains, networks, RPC endpoints, explorers, tokens, decimals and confirmation defaults an install ships with.
 - [Links](https://docs.recv.fund/support/links/): The recv.fund sites, the installer, chain explorers, RPC endpoints, token references and how to contact the team.
 - [Change log](https://docs.recv.fund/support/change-log/): Every recv.fund release, newest first, with what it includes and what it does not.

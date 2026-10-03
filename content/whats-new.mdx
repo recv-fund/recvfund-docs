@@ -7,15 +7,16 @@ description: Release notes for recv.fund, newest first.
 
 The full history is on the [Change log](/support/change-log/) page.
 
-## 2026-09 — Initial release
+## 2026-09: Initial release
 
-The first public release of recv.fund.
+The first public release of recv.fund. The test network deployments were replaced on 2026-10-03; the addresses are under [Networks and tokens](/support/networks/#program-addresses). Mainnet is not deployed yet.
 
 - Solana: USDC, USDT and SOL. Robinhood Chain: USDG and ETH.
 - One-line installer for mainnet and testnet, with update, restart, status and reset commands.
 - Root account wizard, projects, team roles, API keys and webhook endpoints.
-- On-chain merchant registration from a browser wallet. Deposit addresses derived from the program; no deposit keys on the server.
-- Hosted checkout page with wallet payment and per-customer deposit addresses, QR codes and confirmation progress.
+- On-chain merchant registration in one transaction from a browser wallet. On Robinhood Chain it creates your own merchant contract. Deposit addresses derived from your registration; no deposit keys on the server.
+- Hosted checkout page with per-customer deposit addresses, QR codes and confirmation progress. Wallet payment for every currency, SOL included, as one transfer to the customer's deposit address.
+- One fee, at most 2%, taken only when deposits are swept, at a rate fixed for your registration when it is confirmed.
 - Sweeps with an activation threshold and amount, count and time triggers, plus manual sweeps.
 - Payouts with an address book, USD limits, approval by email one-time code, and payout webhooks.
 - Payments and payouts API with PayRam-compatible paths, so an existing integration ports with a host change.

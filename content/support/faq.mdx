@@ -7,39 +7,37 @@ description: Answers on custody, fees, downtime, keys, wallets, underpayment, ex
 
 ## Is recv.fund custodial?
 
-No. recv.fund is software you run on your own server. Nothing we run is in the path of a payment. Funds move from the customer through the on-chain program to the settlement wallet you registered, or sit at a deposit address until your install sweeps them to that wallet.
+No. recv.fund is software you run on your own server. Nothing we run is in the path of a payment. Every customer payment is a plain transfer from the customer's wallet to that customer's deposit address; no recv.fund contract or program instruction runs when a customer pays. The funds stay at the deposit address until your install sweeps them to the settlement wallet you registered.
 
-The program can move funds only to a merchant's registered settlement wallet and to the fee collector. No instruction takes a caller-supplied destination. Only a transaction signed by your admin wallet can change your settlement wallet. There is no pause or freeze function, and the vendor authority cannot call the sweep instructions.
+A sweep can move funds from a deposit address only to your registered settlement wallet and to the fee collector recorded in your registration. No instruction or function takes a caller-supplied destination. Only a transaction signed by your admin wallet can change your settlement wallet. There is no pause or freeze function. On Solana the vendor authority cannot sign a sweep; on Robinhood Chain your merchant contract has no owner and recv.fund has no role in it. If the fee collector cannot receive a fee, the fee goes to your settlement wallet, so no account recv.fund controls can block a sweep.
 
 recv.fund is non-custodial software; you remain responsible for your own legal obligations in your jurisdiction.
 
 ## What fee is charged, and where is it enforced?
 
-A percentage of each settlement, deducted by the on-chain program and sent to the fee collector in the same transaction as the settlement. There are two rates, one for checkout payments and one for sweeps, both stored in the program's configuration in basis points. The rates in force are read from the program and shown in the dashboard when the program address is configured, before you register.
+One fee, a percentage of each sweep. Nothing is taken when a customer pays; the full amount arrives at the customer's deposit address. When your install sweeps a deposit address, the sweep sends the fee to the fee collector and the rest to your settlement wallet in the same transaction. The fee is `amount * rate / 10000`, rounded down, and the rate is at most 200 basis points (2%).
 
-- Checkout payment: the fee is taken at payment time. The settlement is two transfers in one transaction: the merchant share to your settlement wallet and the fee to the fee collector.
-- Deposit and sweep: nothing is taken when the deposit arrives. The fee is taken when the balance is swept to the settlement wallet.
+The rate and the fee collector are recorded in your registration on chain when the registration transaction is confirmed: in the `Merchant` account on Solana, in your own merchant contract on Robinhood Chain. Sweeps read them from there. Before you sign, the dashboard shows the rate under Nodes ("Fee for new registrations (basis points, taken at sweep)") and in the registration panel ("Fee: N bps of each sweep").
 
 There is no subscription and no setup fee. You pay for your own server and the network fees of sweeps and payouts.
 
 ## Can the fee change?
 
-Within a limit. The program has a hard maximum of 200 basis points (2%) compiled into its code. recv.fund can lower or raise a rate below that limit without a program upgrade. The program rejects any rate above it.
+Not for a registered merchant. Your rate and fee collector are copied into your registration when it is created, and no instruction or function exists that changes them afterwards, for you or for recv.fund. recv.fund can change the terms only for registrations made after the change (`set_fee_terms` on the Solana program, `setFeeTerms` on the Robinhood Chain factory), and only up to the 200 basis points (2%) maximum compiled into the code.
 
-On Robinhood Chain the contract is not upgradeable; any change would be a new deployment with a new address, and merchants would need to register again. On Solana the upgrade authority is to be burned or moved to a multisig before mainnet use; until that is published, treat the deployment as provisional.
+These guarantees hold as long as the code itself cannot be replaced. The Robinhood Chain contracts have no proxy and cannot be upgraded; a change ships as a new factory, and merchant contracts created by the old one keep working unchanged. The Solana devnet program still has an upgrade authority and is provisional. The server refuses a Solana mainnet program that still has an upgrade authority, and the mainnet program is not deployed yet.
 
 ## What happens if my server is offline?
 
-Payments still settle. A checkout payment goes from the customer's wallet through the program to your settlement wallet whether or not your server is running. A deposit lands at the customer's deposit address in the same way.
+Payments still arrive. A customer who already has a deposit address can send to it whether or not your server is running, and the funds stay at that address. The checkout page itself is served by your server, so it is not available while the server is down.
 
-What stops is bookkeeping. When the server is back:
+What stops is bookkeeping and sweeping. When the server is back:
 
-- The program-event watcher resumes from its saved position and credits every checkout payment it missed.
-- The deposit watcher resumes from its per-address progress and credits every deposit it missed.
+- The deposit watcher resumes from its per-address progress and credits every deposit it missed, including wallet payments whose hash the checkout page could not submit.
 - Detected transfers continue counting confirmations.
 - Queued webhooks and queued sweeps and payouts resume; a webhook whose delivery lease expired is retried.
 
-Both watchers keep their position in the database and advance it only after a page has been fully processed, so a crash mid-page replays that page safely. The RPC nodes you use must retain enough history for the catch-up. Payments whose expiry passed while the server was down are cancelled by the expiry scheduler. A checkout payment made for such a payment is still credited to it when discovered and can move it to a filled state; see the expiry question below for deposits.
+The deposit watcher keeps its position in the database and advances it only after a page has been fully processed, so a crash mid-page replays that page safely. The RPC nodes you use must retain enough history for the catch-up. Payments whose expiry passed while the server was down are cancelled by the expiry scheduler; see the expiry question below for how later transfers are matched.
 
 If a payment is still missing afterwards, report its transaction hash under Payments, Missed payments.
 
@@ -59,7 +57,7 @@ The payment is valued at the confirmed amount received.
 
 - Below the requested amount by more than the fill tolerance (0.01 USD by default): `PARTIALLY_FILLED`. A later deposit from the same customer is matched to it and can bring it to `FILLED`. Partially filled payments do not expire automatically.
 - Within the tolerance: `FILLED`.
-- Above the tolerance: `OVER_FILLED`. The whole amount is credited and reaches your settlement wallet; nothing is returned automatically.
+- Above the tolerance: `OVER_FILLED`. The whole amount is credited and is swept to your settlement wallet like any other deposit; nothing is returned automatically.
 
 Each state is sent once as a webhook. The checkout page asks for an exact token amount from a quote and states the currency and network; funds sent in another currency or on another network are not credited to that payment.
 
@@ -67,11 +65,11 @@ Each state is sent once as a webhook. The checkout page asks for an exact token 
 
 An `OPEN` payment past its expiry (24 hours by default) becomes `CANCELLED` and a `payment.cancelled` webhook is sent. The checkout page no longer offers a quote or a wallet payment for it.
 
-Funds can still arrive afterwards. A checkout payment for that invoice id, or a transfer that was already detected before cancellation, is credited to the cancelled payment and can move it to a filled state. A new deposit to the customer's address after cancellation is not matched to a cancelled payment; it is credited to the customer's newest open payment if there is one, or recorded as an unmatched deposit under the customer. Unmatched deposits are swept like any other balance.
+Funds can still arrive afterwards. A wallet payment whose hash the checkout page submits for that payment, or a transfer that was already detected before cancellation, is credited to the cancelled payment and can move it to a filled state. Any other new deposit to the customer's address after cancellation is not matched to a cancelled payment; it is credited to the customer's newest open payment if there is one, or recorded as an unmatched deposit under the customer. Unmatched deposits are swept like any other balance.
 
 ## How do refunds work?
 
-There is no refund feature. Checkout payments arrive in your settlement wallet, which the server does not control, and deposits arrive at addresses that have no key.
+There is no refund feature. Payments arrive at deposit addresses, which have no key and can only be swept to your settlement wallet, and your settlement wallet is not controlled by the server.
 
 If you decide to return funds, the mechanism the software provides is a payout: fund the project's hot wallet with the token, then create a payout to the customer's address from the dashboard or the API. Payouts are subject to the project's limits and approval. See [Payouts](/features/payouts/).
 
@@ -81,9 +79,9 @@ No identity verification is built in, and there is no account with recv.fund. Me
 
 ## Which wallets work on the checkout page?
 
-Injected browser wallets: EVM wallets on Robinhood Chain and Phantom- or Solflare-compatible wallets on Solana. WalletConnect is not implemented yet, and neither is EIP-2612 `permit` (ERC-20 payments use an approval step followed by the payment).
+Injected browser wallets: EVM wallets on Robinhood Chain and Phantom- or Solflare-compatible wallets on Solana. Every currency can be paid from a connected wallet, SOL included: the wallet signs one plain transfer of the quoted amount to the customer's deposit address, with no approval step. WalletConnect is not implemented yet.
 
-Customers without a browser wallet, or paying from an exchange, send to the deposit address shown on the page or in its QR code. The QR code contains the address; the customer must use the currency and network stated on the page.
+Customers without a browser wallet, or paying from an exchange, send to the deposit address shown on the page or in its QR code. The QR code contains the address; the customer must use the currency and network stated on the page. Both ways the funds arrive at the same address.
 
 ## Is testnet supported?
 
@@ -117,7 +115,7 @@ Sweeps and payouts need SOL or ETH for network fees. A sweep or payout that cann
 
 ## Is a transfer straight to my settlement wallet credited?
 
-No. The watchers credit two kinds of transfer only: program events for checkout payments, and transfers into deposit addresses. A customer must pay through the checkout page or send to their deposit address.
+No. The server credits only transfers into deposit addresses. A wallet payment from the checkout page is such a transfer. A customer must pay through the checkout page or send to their deposit address.
 
 ## Where do I get help?
 

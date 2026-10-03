@@ -51,7 +51,13 @@ types/css.d.ts       declaration for global stylesheet imports
 | `content/support/` | Glossary, Networks and tokens, Links, Change log, FAQ |
 
 Every page states only what `../recvfund-server/docs/*.md` and the server
-code implement. Features that are planned but not implemented (WalletConnect,
+code implement. Pages about contracts, the fee and the program addresses
+follow `../recvfund-contracts-evm/README.md` and
+`../recvfund-contracts-solana/README.md`. Since 2026-10-03 the pages describe
+the deposit-only payment model of the server branch
+`feat/deposit-only-settlement`: every customer payment is a transfer to the
+customer's deposit address, the fee is taken only at sweep and is fixed per
+registration, and registration is one transaction. Features that are planned but not implemented (WalletConnect,
 low-balance alerts, operator mode, the public ticker endpoint, deep-reorg
 reconciliation) are marked as not available in this release. When the server
 changes, update the page that describes it in the same change.

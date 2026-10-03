@@ -1,6 +1,6 @@
 ---
 title: Node configuration
-description: The Nodes page - the deployed program address per network, the RPC node pool with preferred, active and public flags, connection tests, processing cursors and the currency catalog.
+description: The Nodes page - the deployed program ID or factory address per network, the fee for new registrations, the RPC node pool with preferred, active and public flags, connection tests, processing cursors and the currency catalog.
 ---
 
 # Node configuration
@@ -9,26 +9,25 @@ Open Nodes in the sidebar (`/settings/nodes`). Only owners and admins see it. Th
 
 ## Connection status
 
-Four values, read from the database and the chain:
+Three values, read from the database and the chain:
 
 | Value | Meaning |
 | --- | --- |
 | Chain reference | The network's external identifier: `mainnet-beta` or `devnet` on Solana, chain ID `4663` or `46630` on Robinhood Chain. |
-| Program | The configured program address, or "Not configured". |
-| Checkout fee (basis points) | The fee the program takes on a wallet checkout payment, read from the program's config. "Unavailable" until the program is configured. |
-| Sweep fee (basis points) | The fee the program takes on a deposit sweep, read the same way. |
+| Program | The configured program ID or factory address, or "Not configured". |
+| Fee for new registrations (basis points, taken at sweep) | The fee rate that a registration made now would receive, read from the program's config account on Solana or from the factory on Robinhood Chain. "Unavailable" until the program is configured. |
 
-The fee rates are set in the on-chain program, not in your installation. The dashboard shows them here and again when you register.
+The fee is taken only when a deposit is swept, never when a customer pays. The rate is set on chain by recv.fund, not in your installation, and it cannot exceed 200 basis points (2%). When you register, the rate and the fee collector in force are copied into your registration and do not change afterwards. A later change by recv.fund applies only to registrations made after it, so the value shown here can differ from the rate of an existing registration. The registration panel shows the rate before you sign.
 
 ## Deployed program
 
-This is where the program is configured; there is no other place. Enter the recv.fund program address for the selected network in "Program or registry address" and press "Validate and save". On Solana it is the program ID; on Robinhood Chain it is the registry contract address.
+This is where the program is configured; there is no other place. Enter the recv.fund address for the selected network in "Program or registry address" and press "Validate and save". On Solana it is the program ID; on Robinhood Chain it is the address of the `RecvFundFactory` contract, through which each merchant creates its own merchant contract.
 
-Before saving, the server reads the executable code at that address and compares it with the program build it ships with (a pinned hash of the runtime bytecode on EVM, of the program bytes on Solana), then reads the program's config account and fee cap. Only a matching build is accepted. A failed validation changes nothing. Success writes the chain row and its configuration key in one transaction, after which the fee values above fill in and registration becomes possible for that network.
+Before saving, the server reads the code at that address and compares it with the build it ships with (a pinned hash of the runtime bytecode on Robinhood Chain, of the program bytes on Solana), then reads the fee terms for new registrations and the fee cap. Only a matching build is accepted. On Solana mainnet the server also refuses a program that still has an upgrade authority; the devnet program keeps one and should be treated as provisional. A failed validation changes nothing. Success writes the chain row and its configuration key in one transaction, after which the fee value above fills in and registration becomes possible for that network.
 
 The address cannot be replaced once any merchant registration has started on that network, because existing deposit addresses are derived from it. Choose the network type at install time and configure the program once.
 
-Program addresses start empty on every installation. The installation does not assume a program is deployed; you enter the address published for the network. The test network addresses are listed under [Networks and tokens](/support/networks/#program-addresses); mainnet is not deployed yet.
+Program addresses start empty on every installation. The installation does not assume a program is deployed; you enter the address published for the network. The test network addresses are listed under [Networks and tokens](/support/networks/#program-addresses); mainnet is not deployed yet. The addresses published on 2026-09-30 are superseded and are not accepted by the current server build.
 
 ## RPC nodes
 
@@ -57,12 +56,12 @@ How the pool is used: reads try the preferred active node first, then the other 
 
 For a mainnet install, add a private endpoint from an RPC provider and prefer it. Two capabilities matter beyond throughput:
 
-- Native ETH deposits on Robinhood Chain are proven with `debug_traceTransaction` and `debug_traceBlockByHash` using the `callTracer`. A node without these methods cannot credit ETH sent to a deposit address; token deposits and checkout payments are unaffected.
+- Native ETH deposits on Robinhood Chain are proven with `debug_traceTransaction` and `debug_traceBlockByHash` using the `callTracer`. A node without these methods cannot credit ETH sent to a deposit address, including ETH paid from a connected wallet on the checkout page; token payments are unaffected.
 - Deposit discovery walks transaction history. The node must retain enough history for the addresses being scanned. Failover to another node does not replace missing history.
 
 ## Processing cursors
 
-Each watcher stores where it is: the kind of cursor, its value, whether it is running, and the last error. New installations show "No processor has recorded a cursor yet." until the first watcher pass. Watchers start on their own; there is nothing to enable here. The polling intervals are configuration values: program events every 10 seconds, deposits every 15 seconds, confirmations every 15 seconds.
+Each watcher stores where it is: the kind of cursor, its value, whether it is running, and the last error. New installations show "No processor has recorded a cursor yet." until the first watcher pass. Watchers start on their own; there is nothing to enable here. The polling intervals are configuration values: deposits every 15 seconds, confirmations every 15 seconds.
 
 If a cursor shows a persistent error, check the node table first; most errors are RPC errors and clear on the next pass once a working node is active. If a cursor stays stuck after the RPC is healthy, restart the services with the installer's `--restart` operation (see [Script usage](/deployment-guide/script-usage/)). Watchers resume from their stored cursors, and replay after a restart is safe. The dashboard has no restart button in this release.
 

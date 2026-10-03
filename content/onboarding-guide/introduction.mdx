@@ -14,9 +14,9 @@ Everything below happens in the dashboard. Nothing in this guide requires shell 
 | Step | Page | What it does |
 | --- | --- | --- |
 | 1 | [Root account setup](/onboarding-guide/root-account-setup/) | Create the owner account and first project at `/signup`, sign in, set the site URL and email delivery, invite teammates. |
-| 2 | [Node configuration](/onboarding-guide/node-configuration/) | Enter the recv.fund program address for each network, check the RPC nodes, review the currency catalog. |
+| 2 | [Node configuration](/onboarding-guide/node-configuration/) | Enter the recv.fund program ID (Solana) or factory address (Robinhood Chain) for each network, check the RPC nodes, review the currency catalog. |
 | 3 | [Hot wallet](/onboarding-guide/hot-wallet/) | Generate or import the one key the server holds, assign it to the project, fund it with SOL or ETH. |
-| 4 | [Merchant registration](/onboarding-guide/merchant-registration/) | Register the project on-chain with your browser wallet: settlement wallet, sweeper, active flag. |
+| 4 | [Merchant registration](/onboarding-guide/merchant-registration/) | Register the project on-chain with one transaction from your browser wallet: cold wallet (settlement address) and sweeper. The fee is fixed for the registration at this point. |
 | 5 | [Test payment](/onboarding-guide/test-payment/) | Create a customer and a payment link, pay it, watch it confirm. |
 | 6 | [Funds sweeping](/onboarding-guide/funds-sweeping/) | Move deposit balances to the settlement wallet, automatically or by hand. |
 
@@ -30,8 +30,8 @@ Steps 2, 3 and 4 repeat for every chain you want to accept payments on. Step 4 a
 | --- | --- |
 | The signup URL printed by the installer | It is `https://<your site>/signup`. It works only until the first account exists. |
 | A browser wallet with a little SOL or ETH | Registration is an on-chain transaction signed in your browser. Solana: Phantom, Solflare or another injected Solana wallet. Robinhood Chain: MetaMask or another injected EVM wallet. This wallet becomes the merchant admin key; keep it. WalletConnect is not available in this release, so use a desktop browser with a wallet extension. |
-| A settlement wallet address per chain | The address that receives your funds. Only a transaction signed by the merchant admin wallet can change it later. |
-| The recv.fund program address for each network | Entered once under Nodes. The server verifies the address against the program build it ships with. |
+| A cold wallet (settlement address) per chain | The address that receives your funds when deposits are swept. Only a transaction signed by the merchant admin wallet can change it later. |
+| The recv.fund program ID (Solana) or factory address (Robinhood Chain) for each network | Entered once under Nodes. The server verifies the code at the address against the build it ships with. The test network addresses are listed under [Networks and tokens](/support/networks/#program-addresses). |
 | An SMTP server | Payout approval codes are sent by email. Payments and sweeps do not need email. Configure it early so the test email and payouts work when you get to them. |
 | Native currency for the hot wallet | The hot wallet pays the network fee of every sweep and sends payouts. On testnet, use a faucet. |
 
@@ -43,7 +43,7 @@ A chain being listed in the dashboard does not enable checkout on it. For a proj
 
 | Requirement | Where |
 | --- | --- |
-| The program address for that network is configured and verified | Nodes → Deployed program |
+| The program ID or factory address for that network is configured and verified | Nodes → Deployed program |
 | The project has an active merchant registration on that chain | Registrations |
 | At least one currency of that chain is enabled for the project | Projects → Enabled currencies |
 | A hot wallet for the chain family is assigned to the project | Hot wallets |

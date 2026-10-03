@@ -52,7 +52,7 @@ A transfer is credited only from proof read from the chain: the server re-derive
 
 Deposits follow the confirmation and valuation rules in [Payment links](/features/payment-links/#confirmations-and-valuation). The transfer's fee is recorded as null because the fee is taken at sweep time.
 
-A wallet payment from the checkout page is a deposit like any other, with one difference: when the page submits its hash and the server records the transfer for the first time, the transfer is credited to the payment that was being paid, not to the customer's newest open payment. If the deposit watcher recorded the transfer first, the watcher's match is kept. A transfer in any supported currency is recorded even if that currency has since been disabled for the project.
+A wallet payment from the checkout page is a deposit like any other, with one difference: when the page submits its hash and the server records the transfer for the first time, the transfer is credited to the payment that was being paid, not to the customer's newest open payment. If the deposit watcher recorded the transfer first, the watcher's match is kept, and the checkout confirmation returns a conflict when that match is not the payment being paid. A transfer in any supported currency is recorded even if that currency has since been disabled for the project.
 
 ## Missed-payment reports
 

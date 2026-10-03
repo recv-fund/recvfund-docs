@@ -211,7 +211,7 @@ Errors:
 
 ## POST `/api/v1/checkout/{reference_id}/confirm`
 
-Tells the server about a transaction hash so it can verify it on chain now instead of waiting for the deposit watcher. Requires that a currency on the given chain is already selected for the payment. The server reads the transaction from its RPC pool, checks that it contains a transfer of the selected currency to the customer's deposit address on that chain, and records each such transfer as a deposit (kind `deposit`). When the server records a transfer for the first time, it binds the transfer to this payment. If the deposit watcher recorded the same transfer first, the payment the watcher matched is kept. The server never trusts an amount or a success claim from the client.
+Tells the server about a transaction hash so it can verify it on chain now instead of waiting for the deposit watcher. Requires that a currency on the given chain is already selected for the payment. The server reads the transaction from its RPC pool, checks that it contains a transfer of the selected currency to the customer's deposit address on that chain, and records each such transfer as a deposit (kind `deposit`). When the server records a transfer for the first time, it binds the transfer to this payment. If the deposit watcher recorded the same transfer first, the binding the watcher made is kept (another payment, or none), and when no transfer in the transaction is bound to this payment the call returns `409 CONFLICT` ("Transaction is already recorded for another payment"). The server never trusts an amount or a success claim from the client.
 
 ```bash
 curl -X POST https://<your-site>/api/v1/checkout/c80f5363-0397-4761-aa1a-3155c3a21470/confirm \
@@ -243,7 +243,7 @@ Errors:
 | --- | --- | --- |
 | 400 | `BAD_REQUEST` | Field validation; no currency is selected on `chainID`; the customer has no deposit address on this chain; the transaction is invalid, failed, or contains no transfer of the selected currency to the deposit address. |
 | 404 | `NOT_FOUND` | Unknown reference id. |
-| 409 | `CONFLICT` | The transaction is not yet included or confirmed (retry later); the merchant registration on this chain is unavailable; the transfer conflicts with one already recorded. |
+| 409 | `CONFLICT` | The transaction's transfer is already recorded for another payment or left unmatched; the transaction is not yet included or confirmed (retry later); the merchant registration on this chain is unavailable; the transfer conflicts with one already recorded. |
 | 429 | `RATE_LIMITED` | Per-IP limit exhausted. |
 | 503 | `UNAVAILABLE` | RPC or price lookup unavailable; nothing is recorded. |
 

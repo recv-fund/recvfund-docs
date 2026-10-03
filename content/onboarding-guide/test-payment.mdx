@@ -58,7 +58,7 @@ Nothing the browser sends marks an invoice paid. The watchers read the chain:
 
 A found transfer is recorded as `detected` and contributes nothing until it has the required confirmations: 1 on Solana, 12 blocks on Robinhood Chain by default. The confirmation worker rechecks every 15 seconds. Once confirmed, the transfer is valued in USD at the price observed at detection and the invoice's received amount is updated. The invoice becomes `filled` when the received amount is within 0.01 USD of the requested amount (`payment.fillToleranceUsd`), `partially-filled` below, `over-filled` above. A later deposit can move a partially filled invoice to filled, even after its expiry.
 
-A wallet payment confirmed through the checkout page is credited to the invoice that was paid, provided the server records the transfer first; if the deposit watcher recorded it first, the watcher's match is kept. Every other deposit is matched to the customer's newest open or partially filled invoice. A deposit with no eligible invoice is still recorded and shown under the customer as an unmatched transfer; it counts in the customer's Received total and can be swept.
+A wallet payment confirmed through the checkout page is credited to the invoice that was paid, provided the server records the transfer first; if the deposit watcher recorded it first, the watcher's match is kept and the confirmation reports a conflict. Every other deposit is matched to the customer's newest open or partially filled invoice. A deposit with no eligible invoice is still recorded and shown under the customer as an unmatched transfer; it counts in the customer's Received total and can be swept.
 
 ## 5. What the dashboard shows
 

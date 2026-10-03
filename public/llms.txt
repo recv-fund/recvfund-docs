@@ -23,7 +23,7 @@
 - [Hot wallet](https://docs.recv.fund/onboarding-guide/hot-wallet/): The one private key the server holds - generating or importing it, how it is stored, assigning it to projects, reading balances, funding it, and what it pays for.
 - [Merchant registration](https://docs.recv.fund/onboarding-guide/merchant-registration/): Registering a project on-chain from the Registrations page - connecting a browser wallet, choosing the cold wallet (settlement address), signing the single registration transaction, the fee fixed for the registration, confirming it on the server, and what changes afterwards.
 - [Test payment](https://docs.recv.fund/onboarding-guide/test-payment/): Creating a customer and a payment link in the dashboard, what the customer sees on the checkout page, how the payment is credited and confirmed, and what the dashboard shows.
-- [Funds sweeping](https://docs.recv.fund/onboarding-guide/funds-sweeping/): How deposit balances reach the settlement wallet - the activation threshold, the amount, address-count and time triggers, manual sweeps on the Sweeps page, the fee, what the hot wallet pays, and what a sweep does to the deposit account.
+- [Funds sweeping](https://docs.recv.fund/onboarding-guide/funds-sweeping/): How deposit balances reach the settlement wallet - the activation threshold, the amount, address-count and time triggers, manual sweeps on the Sweeps page, the fee taken at sweep, what the hot wallet pays, and what a sweep does to the deposit account.
 
 ## Features
 
@@ -35,7 +35,7 @@
 - [User management](https://docs.recv.fund/features/user-management/): The five roles, inviting members with a temporary password, forced password change, deactivation, session revocation and the activity log.
 - [Analytics](https://docs.recv.fund/features/analytics/): The overview page: confirmed receipts in USD, date presets and custom ranges, receipts by project and by network or currency, first-time and returning payers.
 - [Payouts](https://docs.recv.fund/features/payouts/): Sending funds from the hot wallet: the address book, creating a payout, approval by email one-time code, USD minimum and limits, durable execution, states and payout webhooks.
-- [Sweeps](https://docs.recv.fund/features/sweeps/): Moving customer deposit balances to your settlement wallet through the program: activation threshold, amount, count and time triggers, automatic scheduling, manual sweeps, the fee at sweep, execution and bookkeeping.
+- [Sweeps](https://docs.recv.fund/features/sweeps/): Moving customer deposit balances to your settlement wallet: activation threshold, amount, count and time triggers, automatic scheduling, manual sweeps, the fee at sweep, execution and bookkeeping.
 - [Webhooks](https://docs.recv.fund/features/webhooks/): Endpoints per project, the X-Recv-Signature and X-Payram-Signature headers, HMAC verification, the retry schedule, the delivery log and the SEND_WEBHOOKS switch.
 - [Operator mode](https://docs.recv.fund/features/operator-mode/): Operator mode, one install serving several merchants with a markup, is planned and not part of this release. What one install can do today.
 

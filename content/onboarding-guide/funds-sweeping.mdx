@@ -1,13 +1,13 @@
 ---
 title: Funds sweeping
-description: How deposit balances reach the settlement wallet - the activation threshold, the amount, address-count and time triggers, manual sweeps on the Sweeps page, the fee, what the hot wallet pays, and what a sweep does to the deposit account.
+description: How deposit balances reach the settlement wallet - the activation threshold, the amount, address-count and time triggers, manual sweeps on the Sweeps page, the fee taken at sweep, what the hot wallet pays, and what a sweep does to the deposit account.
 ---
 
 # Funds sweeping
 
-A sweep moves the balance of one customer deposit address, in one currency, to your settlement wallet. It is a call to the program's `sweep` instruction, signed by the project's hot wallet, the address registered on-chain as your sweeper. In that transaction the program sends the balance minus the sweep fee to your registered settlement wallet and the fee to the fee collector. The program is the only path out of a deposit address, and it has no other destination.
+A sweep moves the balance of one customer deposit address, in one currency, to your settlement wallet. It is signed by the project's hot wallet, the address registered on-chain as your sweeper. On Solana it calls the program's `sweep_token` or `sweep_sol` instruction; on Robinhood Chain it calls `sweepToken` or `sweepNative` on your merchant contract. In that transaction the balance minus the fee goes to your registered settlement wallet and the fee goes to the fee collector recorded in your registration. A sweep is the only way funds leave a deposit address, and it has no other destination.
 
-Wallet checkout payments are never swept: they already went to the settlement wallet at payment time. Sweeps concern deposits only, including deposits that matched no invoice. An inactive registration still allows sweeps.
+Every customer payment arrives at a deposit address, whether it was sent from a connected wallet on the checkout page or from any other wallet or exchange. Sweeps therefore cover all received funds, including deposits that matched no invoice. An inactive registration still allows sweeps.
 
 Open Sweeps in the sidebar (`/wallets/sweeps`). Every member can read it; owners, admins and project leads can queue sweeps and change settings, with one project selected in the sidebar.
 
@@ -51,11 +51,13 @@ Amounts are estimates until a sweep is confirmed; until then the fee column read
 Two different costs apply to every sweep:
 
 - **The network fee** (gas on Robinhood Chain, the transaction fee on Solana) is paid by the hot wallet in native currency. Keep it funded; see [Hot wallet](/onboarding-guide/hot-wallet/). A wallet that cannot pay produces a failed row, and the scheduler waits an hour before trying that address and asset again automatically. A manual queue retries at once.
-- **The sweep fee** is taken by the program from the swept amount, in the swept currency, at the rate shown as "Sweep fee (basis points)" under Nodes. It appears in the Program fee column once the sweep is confirmed. The rate is fixed in the program's configuration and cannot be changed from your installation.
+- **The recv.fund fee** is taken from the swept amount, in the swept currency, at the rate recorded in your registration when it was confirmed (the panel showed "Fee: N bps of each sweep"). The fee is the amount times the rate divided by 10,000, rounded down, so the rounding remainder stays with you. The rate cannot exceed 200 basis points (2%) and cannot change for your registration, neither from your installation nor by recv.fund. It appears in the Program fee column once the sweep is confirmed. The value "Fee for new registrations" under Nodes applies only to registrations made later.
+
+If the fee collector cannot receive the fee, the sweep still completes and the fee goes to your settlement wallet instead; the Program fee column then shows 0. On Robinhood Chain this happens when the collector rejects ETH, uses up the fixed gas allowance of the fee transfer, or the token blocks transfers to it; on Solana when a SOL fee would leave the collector below rent exemption, or when the collector's token account is frozen. No account that recv.fund controls can block a sweep. On Robinhood Chain a sweep that owes a fee reverts with `InsufficientGas()` if too little gas is supplied, so the fee cannot be skipped by underfunding the transaction.
 
 ## What happens to the deposit account
 
-On Solana a token sweep transfers the balance and closes the deposit token account; the next deposit in that token recreates it. A native SOL sweep empties the deposit account. On Robinhood Chain the forwarder contract at the deposit address stays deployed after a sweep, so later sweeps of the same address reuse it. In every case the deposit address itself is permanent: the customer can keep sending to it.
+On Solana a token sweep transfers the balance and closes the deposit token account; the next deposit in that token recreates it. A native SOL sweep empties the deposit account. On Robinhood Chain the first sweep of a deposit address deploys a small forwarder contract there, paid for by the hot wallet as part of that sweep's gas; the forwarder stays deployed, so later sweeps of the same address reuse it and cost less. In every case the deposit address itself is permanent: the customer can keep sending to it.
 
 ## Execution details worth knowing
 

@@ -11,10 +11,10 @@ Open Hot wallets in the sidebar (`/wallets/hot`). Owners and admins can generate
 
 The hot wallet is the only private key stored on your server. It does two jobs:
 
-- **Sweeps.** When a customer's deposit balance is moved to your settlement wallet, the hot wallet signs that transaction and pays its network fee. Registration writes the hot wallet address on-chain as the merchant's sweeper, so only this wallet can call `sweep` for your merchant record, and the program can send the funds only to your registered settlement wallet and the fee collector.
+- **Sweeps.** When a customer's deposit balance is moved to your settlement wallet, the hot wallet signs that transaction and pays its network fee. Registration writes the hot wallet address on-chain as the merchant's sweeper, so this wallet (and your admin wallet) can sweep for your merchant record, and a sweep can send the funds only to your registered settlement wallet and the fee collector recorded in your registration. On Robinhood Chain the hot wallet also pays the gas to deploy a deposit address's forwarder contract on its first sweep.
 - **Payouts.** Approved payouts are sent from the hot wallet, so it must hold the tokens you intend to pay out as well as native currency for the fee.
 
-Customer funds do not pass through it. Checkout payments go straight to your settlement wallet, and deposits sit at the customer's deposit address until swept. Deposit addresses have no private key anywhere; they are derived from the on-chain program and your registration.
+Customer funds do not pass through it. Every customer payment, including one made from a connected wallet on the checkout page, goes to the customer's deposit address and stays there until swept. Deposit addresses have no private key anywhere; they are derived from your on-chain registration.
 
 One hot wallet belongs to one chain family: `solana` (Solana) or `evm` (Robinhood Chain). A wallet can serve several projects, and each project has at most one wallet per family.
 
@@ -44,7 +44,7 @@ Either way the key is encrypted with AES-256-GCM under the `AES_ENCRYPTION_KEY` 
 
 **Disable** stops the wallet from being assigned or used for new sweep and payout broadcasts; transactions already sent are still confirmed. Balances of an inactive wallet remain readable.
 
-Assignment is a database setting. If a project already has an active registration and you assign a different wallet, the on-chain sweeper does not change by itself: prepare an "Update sweeper" transaction on the Registrations page and sign it with the merchant admin wallet. Until then the program still accepts sweeps only from the old address.
+Assignment is a database setting. If a project already has an active registration and you assign a different wallet, the on-chain sweeper does not change by itself: prepare an "Update sweeper" transaction on the Registrations page and sign it with the merchant admin wallet. Until then the chain still accepts sweeps only from the old address (and from the admin wallet).
 
 ## Funding
 

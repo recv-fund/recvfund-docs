@@ -23,7 +23,11 @@ Node 22 or newer and yarn 1.22.
 
 ## Where it deploys
 
-`out/` is a plain static site. Upload it to any static host that serves
+Every push to `main` deploys: `.github/workflows/deploy.yml` runs the
+typecheck, Biome and `yarn build`, uploads `out/` to the server and switches
+nginx to it (runbook: `recvfund-planning/ops/DEPLOYMENT.md`).
+
+`out/` is a plain static site, servable by any static host that serves
 `index.html` from directories (every route is exported as
 `<route>/index.html` because `trailingSlash` is on). The public hostname is
 `docs.recv.fund`; `public/llms.txt` and the `metadataBase` in

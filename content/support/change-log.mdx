@@ -7,6 +7,28 @@ description: Every recv.fund release, newest first, with what it includes and wh
 
 Short release notes are on the [What's new](/whats-new/) page. This page is the full record.
 
+Since 0.1.2, every change to recv.fund is published as a new version number, and a published version never changes. `--update` installs the newest version.
+
+## 0.1.5 (2026-10-05)
+
+- The installation connects to the recv.fund program (Solana) and factory contract (Robinhood Chain) by itself. Each release ships the addresses of its deployments; at startup and every five minutes, the server sets the one for each network that has none yet, after checking its code. An address that is already set is never changed.
+- Nodes shows the recv.fund deployment as verified, or as connecting with the last error and a **Connect now** button. Another address can still be entered under **Use a different deployment (advanced)**.
+- The **recv.fund contract** step of the setup guide is a check, not a task.
+
+## 0.1.4 (2026-10-05)
+
+- Dashboard typography and contrast: system fonts, clearer text colors, and the registration step summarized as three short facts.
+
+## 0.1.3 (2026-10-05)
+
+- The setup guide on the Overview page shows one step at a time for the selected project and network, with links to the right section of each page and back, **Check again**, and an explorable "How money moves" panel.
+- Installer 0.1.3: `--http-bind` publishes the HTTP port on one address only, and `--site-url` sets the site URL without the prompt. See [Script usage](/deployment-guide/script-usage/).
+
+## 0.1.2 (2026-10-05)
+
+- The Overview page starts with a **Set up payments** guide covering the site URL, RPC nodes, contract, hot wallet, registration, currencies, a test payment and email.
+- Every change is released as a new version. The installer looks up the newest version when it runs, instead of a version fixed in the installer.
+
 ## 2026-09: Initial release
 
 The first public release of recv.fund. The mainnet factory and program are not deployed yet, so payments can be taken only on the test networks.

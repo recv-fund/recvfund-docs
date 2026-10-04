@@ -237,7 +237,7 @@ If another proxy or load balancer already owns ports 80 and 443, run the stack o
 3. Set `SITE_URL` to the public HTTPS address your proxy serves.
 4. Forward that address to `http://127.0.0.1:8080` on the server, passing the `Host` header through.
 
-The installer does steps 1 and 2 for you with `--http-port 8080` and asks for the site URL (with `--yes`, it defaults to `http://<server-ip>:8080`). The dashboard shows the site URL under Settings → Site URL; correct it there so payment links and emails carry the address your proxy serves.
+The installer does steps 1 to 3 for you with `--http-port 8080 --site-url https://pay.example.com`. Add `--http-bind 127.0.0.1` when the proxy runs on the same server, so port 8080 isn't reachable from outside. Without `--site-url`, it asks for the site URL (with `--yes`, it uses `http://<server-ip>:8080`). The dashboard shows the site URL under Settings → Site URL; correct it there so payment links and emails carry the address your proxy serves.
 
 ## Updating by hand
 

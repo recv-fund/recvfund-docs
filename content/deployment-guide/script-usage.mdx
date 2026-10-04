@@ -56,6 +56,8 @@ Without an operation flag, the script shows the menu. If an installation already
 | `--pg-password <pw>` | External Postgres password. Visible in the process list while the script runs; prefer the prompt. | prompt, hidden |
 | `--pg-ssl` | Connect to the external Postgres with SSL. | prompt, default no |
 | `--http-port <n>` | Serve plain HTTP on that host port instead of 80 and 443, for a server where your own proxy terminates TLS. Sets `SITE_DOMAIN=:80` and maps the port. The site URL defaults to `http://<server-ip>:<n>`; set the public address under Settings → Site URL afterwards. | 80 and 443, or the HTTP port prompt |
+| `--http-bind <ip>` | Publish the HTTP port on this IPv4 address only, for example `127.0.0.1` when your proxy runs on the same server. Without it, the port is open on every address of the server, and Docker's port publishing is not blocked by `ufw`. Plain HTTP only. | every address |
+| `--site-url <url>` | The public address of the installation in plain-HTTP mode, for example `https://pay.example.com` when your proxy serves HTTPS. Skips the site URL prompt. | prompt; suggests `http://<public ip>[:port]` |
 | `--image-tag <tag>` | Image version to run instead of the newest release, for example `0.1.2`. Written to `.env` as `IMAGE_TAG`. | the newest released version |
 | `--dir <path>` | Install directory. Must be an absolute path. | `/opt/recvfund` |
 | `--source <path>` | Build the API and web images from a source checkout at `<path>` instead of pulling them. Writes `docker-compose.build.yml`, which later updates reuse. Only for people with source access. | pull images |
@@ -82,10 +84,11 @@ curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/downloa
 
 The database password is asked for at the prompt. Add `--yes` and `--pg-password` only where a password in the process list is acceptable.
 
-Behind your own proxy on port 8080:
+Behind your own proxy on the same server, port 8080 reachable from that proxy only:
 
 ```bash
-curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --mainnet --http-port 8080 --yes
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --mainnet --yes \
+  --http-port 8080 --http-bind 127.0.0.1 --site-url https://pay.example.com
 ```
 
 Pin a version and update to it later:

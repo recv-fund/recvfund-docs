@@ -97,7 +97,7 @@ No. The network type is written to `.env` at install time and every chain, curre
 curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --update
 ```
 
-The newest installer moves the installation to the image version released with it, runs database migrations against the new image and then swaps the containers. The API refuses to start with unapplied migrations, which is why migrations run first. The same operation is option 2 in the script's menu. See [Script usage](/deployment-guide/script-usage/).
+The script moves the installation to the newest released version, runs database migrations against the new image and then swaps the containers. Every change to recv.fund is published as a new version number, and a published version never changes, so the version in `IMAGE_TAG` in `/opt/recvfund/.env` tells you exactly what you run. The API refuses to start with unapplied migrations, which is why migrations run first. The same operation is option 2 in the script's menu. See [Script usage](/deployment-guide/script-usage/).
 
 ## How do I stop the installation?
 

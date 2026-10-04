@@ -5,7 +5,7 @@ description: Install recv.fund with the one-line script, with every prompt and i
 
 # Quick setup
 
-The installer is a Bash script published as an asset of each [release of recvfund-scripts](https://github.com/recv-fund/recvfund-scripts/releases); the URL below always serves the newest one. It writes a compose project under `/opt/recvfund`, pulls the public images `ghcr.io/recv-fund/recvfund-api` and `ghcr.io/recv-fund/recvfund-web` at the version released with it, and starts them. Run it on a fresh server over SSH. It needs Bash 4 or newer, `curl` and `openssl`; it installs Docker itself when Docker is missing.
+The installer is a Bash script published as an asset of each [release of recvfund-scripts](https://github.com/recv-fund/recvfund-scripts/releases); the URL below always serves the newest one. It writes a compose project under `/opt/recvfund`, pulls the newest released version of the public images `ghcr.io/recv-fund/recvfund-api` and `ghcr.io/recv-fund/recvfund-web`, and starts them. Run it on a fresh server over SSH. It needs Bash 4 or newer, `curl` and `openssl`; it installs Docker itself when Docker is missing.
 
 ## 1. Run the script
 
@@ -22,7 +22,7 @@ With no flags the script shows a menu. Enter `1` for a fresh install.
 ```
 Operations
   1) fresh install
-  2) update to this installer's release (0.1.1)
+  2) update to the newest release
   3) restart services
   4) reset (remove containers, images and data)
   5) show status
@@ -125,7 +125,7 @@ Configuration
   Database:      bundled container (profile db)
   HTTPS:         Let's Encrypt for pay.example.com (ops@example.com)
   Site URL:      https://pay.example.com
-  Images:        ghcr.io/recv-fund/recvfund-api and recvfund-web, tag 0.1.1
+  Images:        ghcr.io/recv-fund/recvfund-api and recvfund-web, version 0.1.2
   Secrets:       generated (written only to /opt/recvfund/.env)
 
 Write the files and start the services? [Y/n]:

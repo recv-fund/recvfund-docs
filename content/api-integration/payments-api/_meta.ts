@@ -7,6 +7,7 @@ const meta: MetaRecord = {
   'assign-deposit-address': 'Assign deposit address',
   'payment-status': 'Payment status',
   webhook: 'Payment webhook',
+  ticker: 'Ticker',
 };
 
 export default meta;

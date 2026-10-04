@@ -15,7 +15,7 @@ Three endpoints take the `API-Key` header:
 | GET | `/api/v1/withdrawal/{id}/merchant` | Read one payout. |
 | GET | `/api/v1/withdrawal/merchant` | List payouts with filters and pagination. |
 
-Not available through the API in this release: the address book (saved recipients), approving or rejecting a held payout, cancelling a payout, and editing limits. These are dashboard operations. There is no `GET /api/v1/ticker`; amounts are in token units, and for the stablecoins the token amount equals the USD amount.
+Not available through the API in this release: the address book (saved recipients), approving or rejecting a held payout, cancelling a payout, and editing limits. These are dashboard operations. Amounts are in token units; convert from USD with [`GET /api/v1/ticker`](/api-integration/payments-api/ticker/).
 
 ## Lifecycle
 

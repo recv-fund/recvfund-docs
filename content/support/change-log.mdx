@@ -68,6 +68,7 @@ On 2026-10-03 the test network deployments were replaced by the payment model de
 ### API and webhooks
 
 - Payments and payouts API with PayRam-compatible paths, field names and states, authenticated with the `API-Key` header.
+- Public ticker (`GET /api/v1/ticker`) with the current USD price of every active currency.
 - Signed webhooks (`X-Recv-Signature`, HMAC-SHA256) with a ten-attempt retry schedule, delivery history and manual redelivery.
 
 ### Analytics
@@ -81,5 +82,4 @@ On 2026-10-03 the test network deployments were replaced by the payment model de
 - Low-balance email alerts for hot wallets.
 - Operator mode (one install serving several merchants with a markup).
 - Automatic reconciliation after a deep chain reorganisation.
-- The public `/api/v1/ticker` price endpoint.
 - Token-2022 mints on Solana.

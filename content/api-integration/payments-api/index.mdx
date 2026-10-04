@@ -15,6 +15,7 @@ All four endpoints take the `API-Key` header and are scoped to that key's projec
 | GET | `/api/v1/blockchain-currency/reference/{reference_id}` | List the currencies the customer can pay with, and any deposit address already assigned. | [Deposit options](/api-integration/payments-api/deposit-options/) |
 | POST | `/api/v1/deposit-address/reference/{reference_id}` | Derive the customer's permanent deposit address on a chain and select that chain for the payment. | [Assign deposit address](/api-integration/payments-api/assign-deposit-address/) |
 | GET | `/api/v1/payment/reference/{reference_id}` | Read the payment state, filled amounts and confirmation progress. | [Payment status](/api-integration/payments-api/payment-status/) |
+| GET | `/api/v1/ticker` | Current USD price of every active currency; no API key. | [Ticker](/api-integration/payments-api/ticker/) |
 | POST to your URL | payment events | Signed delivery of every state change and every confirmation step. | [Payment webhook](/api-integration/payments-api/webhook/) |
 
 ## Payment states

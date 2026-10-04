@@ -50,6 +50,7 @@
 - [Assign deposit address](https://docs.recv.fund/api-integration/payments-api/assign-deposit-address/): POST /api/v1/deposit-address/reference/{reference_id} derives the customer's permanent deposit address on a chain and selects that chain for the payment.
 - [Payment status](https://docs.recv.fund/api-integration/payments-api/payment-status/): GET /api/v1/payment/reference/{reference_id} returns the state, amounts, deposit address and confirmation progress of a payment.
 - [Payment webhook](https://docs.recv.fund/api-integration/payments-api/webhook/): Event names, payload fields, the X-Recv-Signature and X-Payram-Signature headers, how to verify the HMAC, the retry schedule and how to handle deliveries idempotently.
+- [Ticker](https://docs.recv.fund/api-integration/payments-api/ticker/): GET /api/v1/ticker: every active currency on the installation's network with its current USD price.
 
 ## Support
 

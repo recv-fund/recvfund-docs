@@ -54,7 +54,7 @@ Without an operation flag, the script shows the menu. If an installation already
 | `--pg-password <pw>` | External Postgres password. Visible in the process list while the script runs; prefer the prompt. | prompt, hidden |
 | `--pg-ssl` | Connect to the external Postgres with SSL. | prompt, default no |
 | `--http-port <n>` | Serve plain HTTP on that host port instead of 80 and 443, for a server where your own proxy terminates TLS. Sets `SITE_DOMAIN=:80` and maps the port. The site URL defaults to `http://<server-ip>:<n>`; set the public address under Settings → Site URL afterwards. | 80 and 443, or the HTTP port prompt |
-| `--image-tag <tag>` | Image version to run instead of the installer's own release. Written to `.env` as `IMAGE_TAG`. | the installer's version, for example `0.1.0` (`--version`) |
+| `--image-tag <tag>` | Image version to run instead of the installer's own release. Written to `.env` as `IMAGE_TAG`. | the installer's version, for example `0.1.1` (`--version`) |
 | `--dir <path>` | Install directory. Must be an absolute path. | `/opt/recvfund` |
 | `--source <path>` | Build the API and web images from a source checkout at `<path>` instead of pulling them. Writes `docker-compose.build.yml`, which later updates reuse. Only for people with source access. | pull images |
 

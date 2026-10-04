@@ -62,9 +62,9 @@ These are application defaults, not statements about chain finality. A project c
 
 ## Program addresses
 
-The install does not ship with a program or factory address. The address for your network is entered under Settings, Nodes, in "Program or registry address": the program ID on Solana, the `RecvFundFactory` contract address on Robinhood Chain. Each merchant then creates its own merchant contract through that factory when it registers.
+Each release ships these addresses, and the installation connects to the one for its network by itself after checking that the code matches the release (see [Node configuration](/onboarding-guide/node-configuration/#recvfund-deployment)). You don't need to enter them. They are the program ID on Solana and the `RecvFundFactory` contract address on Robinhood Chain; each merchant creates its own merchant contract through that factory when it registers.
 
-| Chain | Network | What | Address to enter | Fee for new registrations | Fee collector |
+| Chain | Network | What | Address | Fee for new registrations | Fee collector |
 | --- | --- | --- | --- | --- | --- |
 | Solana | devnet | `recvfund` program | `FAZUvvc2anrhgkP6sVczAHp2wkFCfhzpFcbiBt1mVM8J` | 100 bps, taken at sweep | `GStZmhS72eX1euYiwQY9MaxahBopDBLGwfTtXPge3DK` |
 | Robinhood Chain | testnet (46630) | `RecvFundFactory` contract | `0xDc055613c64a39ea6a9a2ad8c15D587381A12f8c` | 100 bps, taken at sweep | `0x74520411b6349b1A79f504D9b4717238Dbade236` |

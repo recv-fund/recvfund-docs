@@ -1,6 +1,6 @@
 ---
 title: Node configuration
-description: The Nodes page - the deployed program ID or factory address per network, the fee for new registrations, the RPC node pool with preferred, active and public flags, connection tests, processing cursors and the currency catalog.
+description: The Nodes page - the recv.fund deployment the installation connects to on each network, the fee for new registrations, the RPC node pool with preferred, active and public flags, connection tests, processing cursors and the currency catalog.
 ---
 
 # Node configuration
@@ -14,20 +14,35 @@ Three values, read from the database and the chain:
 | Value | Meaning |
 | --- | --- |
 | Chain reference | The network's external identifier: `mainnet-beta` or `devnet` on Solana, chain ID `4663` or `46630` on Robinhood Chain. |
-| Program | The configured program ID or factory address, or "Not configured". |
+| Program | The verified program ID or factory address; "Connecting automatically" while the installation connects to it; "Not deployed on this network" where recv.fund has no deployment. |
 | Fee for new registrations (basis points, taken at sweep) | The fee rate that a registration made now would receive, read from the program's config account on Solana or from the factory on Robinhood Chain. "Unavailable" until the program is configured. |
 
 The fee is taken only when a deposit is swept, never when a customer pays. The rate is set on chain by recv.fund, not in your installation, and it cannot exceed 200 basis points (2%). When you register, the rate and the fee collector in force are copied into your registration and do not change afterwards. A later change by recv.fund applies only to registrations made after it, so the value shown here can differ from the rate of an existing registration. The registration panel shows the rate before you sign.
 
-## Deployed program
+## recv.fund deployment
 
-This is where the program is configured; there is no other place. Enter the recv.fund address for the selected network in "Program or registry address" and press "Validate and save". On Solana it is the program ID; on Robinhood Chain it is the address of the `RecvFundFactory` contract, through which each merchant creates its own merchant contract.
+You don't enter anything here. Each release of recv.fund knows the recv.fund deployment for every network it supports: the program ID on Solana, and the address of the `RecvFundFactory` contract on Robinhood Chain, through which each merchant creates its own merchant contract. When the server starts, it connects to that deployment for each network that has none yet, and it tries again every five minutes until it succeeds.
 
-Before saving, the server reads the code at that address and compares it with the build it ships with (a pinned hash of the runtime bytecode on Robinhood Chain, of the program bytes on Solana), then reads the fee terms for new registrations and the fee cap. Only a matching build is accepted. On Solana mainnet the server also refuses a program that still has an upgrade authority; the devnet program keeps one and should be treated as provisional. A failed validation changes nothing. Success writes the chain row and its configuration key in one transaction, after which the fee value above fills in and registration becomes possible for that network.
+Before saving an address, the server reads the code at that address and compares it with the build it ships with (a pinned hash of the runtime bytecode on Robinhood Chain, of the program bytes on Solana), then reads the fee terms for new registrations and the fee cap. Only a matching build is accepted. On Solana mainnet the server also refuses a program that still has an upgrade authority; the devnet program keeps one and should be treated as provisional. A failed check changes nothing. Success writes the chain row and its configuration key in one transaction, after which the fee value above fills in and registration becomes possible for that network.
 
-The address cannot be replaced once any merchant registration has started on that network, because existing deposit addresses are derived from it. Choose the network type at install time and configure the program once.
+The **recv.fund deployment** section shows one of three states:
 
-Program addresses start empty on every installation. The installation does not assume a program is deployed; you enter the address published for the network. The test network addresses are listed under [Networks and tokens](/support/networks/#program-addresses); mainnet is not deployed yet. The addresses published on 2026-09-30 are superseded and are not accepted by the current server build.
+- **Verified:** the address is set and its code matched. A custom address is labeled "custom deployment".
+- **Connecting automatically:** the address isn't set yet. If the last attempt failed, the reason is shown, usually an RPC node that isn't answering. Fix the RPC node above, then select **Connect now** to try at once.
+- **Not deployed:** recv.fund has no deployment on this network yet (mainnet today), so the installation can't take payments on it.
+
+The address can't be replaced once any merchant registration has started on that network, because existing deposit addresses are derived from it. The server never replaces an address that is already set, so a later recv.fund release can't move your registrations. The current addresses are listed under [Networks and tokens](/support/networks/#program-addresses).
+
+### Using a different deployment
+
+Under **Use a different deployment (advanced)**, an owner or admin can enter another address and select **Validate and save**. This is only for an installation that runs against its own deployment of the recv.fund contracts; the code at the address must still match the release. Do it before the first registration on that network.
+
+{/* prettier-ignore */}
+> [!NOTE]
+>
+> Automatic configuration is in version 0.1.5 and later. On older versions,
+> enter the address from [Networks and tokens](/support/networks/#program-addresses)
+> in **Program or registry address** and select **Validate and save**.
 
 ## RPC nodes
 

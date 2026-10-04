@@ -102,6 +102,17 @@ Public site URL (as reached by browsers; editable later in Settings) [http://<se
 
 It checks that the port is free. The site URL is used in payment links and emails; change it later under Settings → Site URL if it is wrong. Let's Encrypt is not offered on macOS, which is supported for local testing only.
 
+### Installing behind a router or in a virtual machine
+
+The suggested site URL uses the public address that `api.ipify.org` reports for this machine. On a cloud server, that's the server's own address. Behind a home or office router, or inside a virtual machine such as Lima, it's the router's address. Browsers can't reach the server there, so the printed signup link doesn't open.
+
+In that case, at the site URL prompt, enter an address your browser can reach:
+
+- **Lima on a Mac:** `http://localhost`. Lima forwards the VM's ports to your Mac.
+- **Another virtual machine or a machine on your network:** `http://<its LAN address>`, for example `http://192.168.64.5`.
+
+If you used `--yes` or accepted the default, open that address in your browser and finish signup. Then set the same address under **Installation** → **Site URL**. Payment links and emails use the site URL, so they point to the wrong place until you change it. Customers outside your network can't reach a local address. For real payments, install on a server with a public address or a domain.
+
 ## 7. Summary and confirmation
 
 The script generates `AES_ENCRYPTION_KEY`, `ADMIN_API_KEY`, `POSTGRES_PASSWORD` (bundled database only) and `REDIS_PASSWORD`, then prints the configuration:
@@ -150,6 +161,8 @@ If the API never reports healthy, the script exits with a nonzero status and poi
 ## 9. Create the root account
 
 Open the signup URL in a browser and continue with [Root account setup](/onboarding-guide/root-account-setup/). The signup page works only until the first account exists; after that the API rejects further root signups.
+
+If the signup link doesn't open, see [Installing behind a router or in a virtual machine](#installing-behind-a-router-or-in-a-virtual-machine).
 
 ## Checking on the install
 

@@ -26,28 +26,25 @@ Steps 2, 3 and 4 repeat for every chain you want to accept payments on. Step 4 a
 
 ## The setup guide in the dashboard
 
-The **Overview** page opens with a **Set up payments** panel that follows the same order as this guide. It shows what's done and what's left for the selected project, explains each step in a sentence or two, and links to the page where you do it. It doesn't change anything itself.
+The **Overview** page opens with a **Set up payments** panel that follows the same order as this guide. It shows what's done and what's left, explains each step in a few sentences, and links to the section of the page where you do it. It doesn't change anything itself.
 
-The panel starts with a one-line summary of how money moves: the customer's wallet sends to that customer's deposit address, your hot wallet later sweeps it to your cold wallet, and the fee is taken only at the sweep. Then it lists these steps:
+At the top of the panel, choose the **Project** and the **Setup network**. The steps are listed on the left, grouped by where they apply:
 
-1. **Site URL**: the address payment links and emails point to.
-2. **RPC node URL for each network**: how your server reads each blockchain.
-3. **recv.fund contract address**: the program ID (Solana) or factory address (Robinhood Chain). On a testnet install, the panel shows the published test addresses. Once an address is set, the panel shows the fee for new registrations.
-4. **Hot wallet**: assigned to the project, with some SOL or ETH for network fees.
-5. **Cold wallet and on-chain registration**: the one transaction you sign and pay for with your browser wallet.
-6. **Accepted currencies**: the tokens customers can pay with in this project.
-7. **Test payment**: done once a payment of the project reaches `FILLED` or `OVER_FILLED`.
-8. **Email (SMTP)**: optional; only payout approvals need it.
+- **Installation:** **Site URL**, **RPC connection** and **recv.fund contract** (the program ID on Solana or the factory address on Robinhood Chain). On a testnet install, the contract step shows the published test addresses. Once an address is set, it shows the fee for new registrations.
+- **Project:** **Hot wallet**, **Register your wallets** (the one transaction you sign and pay for with your browser wallet), **Accepted currencies** and **Test payment**. Test payment is done once a payment of the project reaches `FILLED` or `OVER_FILLED`.
+- **Optional:** **Email (SMTP)**, which only payout approvals need.
 
-Steps 2 through 6 list every active network. A step counts as done once one network is ready, so check the per-network lines for any other network you want to accept. The **Site URL** step stays open when the site URL differs from the address you opened the dashboard at, because payment links would point to the wrong place.
+Select a step to see its explanation, its status on the selected network, and a button that opens the right section of the right page. Those pages show a **Payment setup guide** link that brings you back to the same step. **Check again** reloads every status after you change something. **Previous** and **Next step** move through the list.
 
-Steps 4 through 7 belong to a project. When the sidebar shows **All projects**, choose a project in the panel to see them. A teammate whose role can't read a setting sees "Visible to owners and admins" (or a similar note) instead of a status. The panel hides itself when every required step is done. **Hide guide** and **Show guide** toggle it, and the browser remembers the choice.
+Network checks apply only to the selected network. Repeat the network steps for each network you want to accept. The **Site URL** step stays open when the site URL differs from the address you opened the dashboard at, because payment links would point to the wrong place.
+
+With **Installation only** selected as the project, the panel shows the installation steps. If your role can't complete a step, the panel names the role that can. Below the steps, **How money moves** shows the path of a payment: customer wallet, deposit address, hot wallet sweep, cold wallet. Select a stage to read what happens there. **Hide guide** and **Show guide** toggle the panel, and the browser remembers the choice.
 
 {/* prettier-ignore */}
 > [!NOTE]
 >
-> The setup guide is in version 0.1.2 and later. Run the update command in
-> [Script usage](/deployment-guide/script-usage/) to get it.
+> The step-by-step layout is in version 0.1.3 and later. Run the update
+> command in [Script usage](/deployment-guide/script-usage/) to get it.
 
 ## What you need
 

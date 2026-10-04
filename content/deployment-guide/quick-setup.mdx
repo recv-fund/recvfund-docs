@@ -5,15 +5,15 @@ description: Install recv.fund with the one-line script, with every prompt and i
 
 # Quick setup
 
-The installer is a Bash script served from `recv.fund`. It writes a compose project under `/opt/recvfund`, pulls the images and starts them. Run it on a fresh server over SSH. It needs Bash 4 or newer, `curl` and `openssl`; it installs Docker itself when Docker is missing.
+The installer is a Bash script published as an asset of each [release of recvfund-scripts](https://github.com/recv-fund/recvfund-scripts/releases); the URL below always serves the newest one. It writes a compose project under `/opt/recvfund`, pulls the public images `ghcr.io/recv-fund/recvfund-api` and `ghcr.io/recv-fund/recvfund-web` at the version released with it, and starts them. Run it on a fresh server over SSH. It needs Bash 4 or newer, `curl` and `openssl`; it installs Docker itself when Docker is missing.
 
 ## 1. Run the script
 
 ```bash
-bash <(curl -fsSL https://recv.fund/install.sh)
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash
 ```
 
-Add `sudo` in front if your user cannot run Docker. Pass `--mainnet` or `--testnet` to skip the menu and the network prompt; see [Script usage](/deployment-guide/script-usage/) for every flag.
+The script runs as root through `sudo` so it can install Docker and write `/opt/recvfund`. Pass flags after `-s --`, for example `| sudo bash -s -- --testnet`. Pass `--mainnet` or `--testnet` to skip the menu and the network prompt; see [Script usage](/deployment-guide/script-usage/) for every flag.
 
 ## 2. Operations menu
 
@@ -22,7 +22,7 @@ With no flags the script shows a menu. Enter `1` for a fresh install.
 ```
 Operations
   1) fresh install
-  2) update to the latest images
+  2) update to this installer's release (0.1.0)
   3) restart services
   4) reset (remove containers, images and data)
   5) show status
@@ -114,7 +114,7 @@ Configuration
   Database:      bundled container (profile db)
   HTTPS:         Let's Encrypt for pay.example.com (ops@example.com)
   Site URL:      https://pay.example.com
-  Images:        ghcr.io/recv-fund/recvfund-api and recvfund-web, tag latest
+  Images:        ghcr.io/recv-fund/recvfund-api and recvfund-web, tag 0.1.0
   Secrets:       generated (written only to /opt/recvfund/.env)
 
 Write the files and start the services? [Y/n]:

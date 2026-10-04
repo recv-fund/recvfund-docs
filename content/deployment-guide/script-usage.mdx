@@ -5,26 +5,26 @@ description: Every flag of the recv.fund install script, with what it does and i
 
 # Script usage
 
-The install script handles installs, updates, restarts, status checks and resets. It always runs from the published URL:
+The install script handles installs, updates, restarts, status checks and resets. The newest release is always served at the URL below; a specific release is at `https://github.com/recv-fund/recvfund-scripts/releases/download/vX.Y.Z/install.sh`, next to a `SHA256SUMS` file:
 
 ```bash
-bash <(curl -fsSL https://recv.fund/install.sh) [operation] [options]
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- [operation] [options]
 ```
 
-Add `sudo` in front if your user cannot run Docker. With no operation flag the script shows an operations menu. `--help` prints the same reference as this page; `--version` prints the script version.
+Flags go after `-s --`. With no operation flag the script shows an operations menu. `--help` prints the same reference as this page; `--version` prints the script version.
 
 ## Common commands
 
 ```bash
-bash <(curl -fsSL https://recv.fund/install.sh) --testnet     # first install, test networks
-bash <(curl -fsSL https://recv.fund/install.sh) --mainnet     # production install
-bash <(curl -fsSL https://recv.fund/install.sh) --update      # pull the latest images, migrate, restart
-bash <(curl -fsSL https://recv.fund/install.sh) --restart     # restart without touching data
-bash <(curl -fsSL https://recv.fund/install.sh) --status      # container status and health
-bash <(curl -fsSL https://recv.fund/install.sh) --reset       # remove everything (confirm twice)
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --testnet     # first install, test networks
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --mainnet     # production install
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --update      # move to this release's images, migrate, restart
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --restart     # restart without touching data
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --status      # container status and health
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --reset       # remove everything (confirm twice)
 ```
 
-`https://recv.fund/update.sh` is a shortcut for `install.sh --update` and accepts the same options.
+`https://github.com/recv-fund/recvfund-scripts/releases/latest/download/update.sh` is a shortcut for `install.sh --update` and accepts the same options.
 
 ## Operations
 
@@ -32,7 +32,7 @@ bash <(curl -fsSL https://recv.fund/install.sh) --reset       # remove everythin
 | --- | --- |
 | `--mainnet` | Fresh install against Solana mainnet and Robinhood Chain mainnet. Sets `NETWORK_TYPE=mainnet`. |
 | `--testnet` | Fresh install against Solana devnet and Robinhood Chain testnet. Sets `NETWORK_TYPE=testnet`. Every payment is a test payment. |
-| `--update` | Pull the images for the configured `IMAGE_TAG` (or rebuild from `--source`), run migrations against the new image, then replace the containers. Data and `.env` are untouched. |
+| `--update` | Set `IMAGE_TAG` to the version released with this installer (or to `--image-tag`), pull those images (or rebuild from `--source`), run migrations against the new image, then replace the containers. Data and the rest of `.env` are untouched. It refuses to move a newer installed version back to an older one unless `--image-tag` is given. |
 | `--restart` | Restart every container without pulling or changing data. Use it when the dashboard reports that blocks are no longer being processed. |
 | `--status` | Print `docker compose ps` for the project and the response of `/api/v1/health`. |
 | `--reset` | Stop and remove the containers, the images, every volume (including the bundled database) and the install directory. You must type the install directory path twice to confirm. Cannot be undone. Back up `.env` and the database first. |
@@ -54,7 +54,7 @@ Without an operation flag, the script shows the menu. If an installation already
 | `--pg-password <pw>` | External Postgres password. Visible in the process list while the script runs; prefer the prompt. | prompt, hidden |
 | `--pg-ssl` | Connect to the external Postgres with SSL. | prompt, default no |
 | `--http-port <n>` | Serve plain HTTP on that host port instead of 80 and 443, for a server where your own proxy terminates TLS. Sets `SITE_DOMAIN=:80` and maps the port. The site URL defaults to `http://<server-ip>:<n>`; set the public address under Settings → Site URL afterwards. | 80 and 443, or the HTTP port prompt |
-| `--image-tag <tag>` | Image tag to run, for pinning a version. Written to `.env` as `IMAGE_TAG`. With `--update`, changes the tag before pulling. | `latest` |
+| `--image-tag <tag>` | Image version to run instead of the installer's own release. Written to `.env` as `IMAGE_TAG`. | the installer's version, for example `0.1.0` (`--version`) |
 | `--dir <path>` | Install directory. Must be an absolute path. | `/opt/recvfund` |
 | `--source <path>` | Build the API and web images from a source checkout at `<path>` instead of pulling them. Writes `docker-compose.build.yml`, which later updates reuse. Only for people with source access. | pull images |
 
@@ -67,13 +67,13 @@ Environment variables: `RECV_DRY_RUN=1` prints the Docker commands instead of ru
 Unattended testnet install on an IP address, plain HTTP on port 80:
 
 ```bash
-bash <(curl -fsSL https://recv.fund/install.sh) --testnet --yes
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --testnet --yes
 ```
 
 Mainnet with a domain, Let's Encrypt and a managed database:
 
 ```bash
-bash <(curl -fsSL https://recv.fund/install.sh) --mainnet \
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --mainnet \
   --domain pay.example.com --email ops@example.com \
   --pg-host db.example.com --pg-db recv --pg-user recv --pg-ssl
 ```
@@ -83,13 +83,13 @@ The database password is asked for at the prompt. Add `--yes` and `--pg-password
 Behind your own proxy on port 8080:
 
 ```bash
-bash <(curl -fsSL https://recv.fund/install.sh) --mainnet --http-port 8080 --yes
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --mainnet --http-port 8080 --yes
 ```
 
 Pin a version and update to it later:
 
 ```bash
-bash <(curl -fsSL https://recv.fund/install.sh) --update --image-tag 1.0.2
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --update --image-tag 1.0.2
 ```
 
 ## What the script writes

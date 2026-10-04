@@ -264,6 +264,41 @@ cp .env env.backup
 
 Restore is the reverse: restore the dump into an empty database, restore the uploads archive into the `api-uploads` volume, put `.env` back, start the stack. With an external Postgres, use that service's own backups and still keep a copy of `.env`.
 
+## Stopping and starting
+
+The installer has no stop operation. Stop and start the containers with Docker Compose from the install directory. Run the commands with `sudo` if your user isn't in the `docker` group. Leave out `--profile db` when you use an external Postgres.
+
+To stop every container and keep all data:
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund --profile db stop
+```
+
+To start the stopped containers again:
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund --profile db start
+```
+
+`down` removes the containers but keeps the volumes, `.env` and the database. Bring the stack back with `up -d`:
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund --profile db down
+docker compose -p recvfund --profile db up -d
+```
+
+Without `--profile db`, these commands skip the bundled Postgres container, so `stop` leaves it running. Every container has `restart: unless-stopped`. A container you stopped stays stopped after a reboot, and one you didn't stop starts again with Docker.
+
+{/* prettier-ignore */}
+> [!CAUTION]
+>
+> Don't add `-v` to `down`. It deletes the volumes, including the bundled
+> database. `--reset` also deletes everything; see
+> [Script usage](/deployment-guide/script-usage/).
+
 ## Day-two commands
 
 ```bash

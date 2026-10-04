@@ -37,6 +37,8 @@ curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/downloa
 | `--status` | Print `docker compose ps` for the project and the response of `/api/v1/health`. |
 | `--reset` | Stop and remove the containers, the images, every volume (including the bundled database) and the install directory. You must type the install directory path twice to confirm. Cannot be undone. Back up `.env` and the database first. |
 
+There's no stop operation. To stop the containers and keep the data, see [Stopping and starting](/deployment-guide/advanced-setup/#stopping-and-starting).
+
 Without an operation flag, the script shows the menu. If an installation already exists in the directory, a fresh install asks whether to update it, remove it and install again, or cancel.
 
 ## Options

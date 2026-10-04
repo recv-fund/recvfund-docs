@@ -99,6 +99,10 @@ curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/downloa
 
 The newest installer moves the installation to the image version released with it, runs database migrations against the new image and then swaps the containers. The API refuses to start with unapplied migrations, which is why migrations run first. The same operation is option 2 in the script's menu. See [Script usage](/deployment-guide/script-usage/).
 
+## How do I stop the installation?
+
+From `/opt/recvfund`, run `docker compose -p recvfund --profile db stop`. Start it again with `start`. Your data stays in place. Don't use `--reset` to stop: it deletes the containers, images and data. See [Stopping and starting](/deployment-guide/advanced-setup/#stopping-and-starting).
+
 ## How do I back up?
 
 Three things:

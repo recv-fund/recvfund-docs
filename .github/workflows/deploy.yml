@@ -1,0 +1,88 @@
+# Every push to main is checked, built as a static export and deployed to
+# https://docs.recv.fund/ (recvfund-planning/ops/DEPLOYMENT.md).
+#
+# The export is uploaded to /var/www/recvfund/docs/releases/<commit> on the
+# server as the user "deploy", then the "current" symlink nginx serves is
+# switched to it in one rename, so visitors never see a half-uploaded site.
+# The five newest releases are kept; to roll back, re-run the deploy job of
+# an earlier run.
+#
+# Needs the secrets DEPLOY_SSH_KEY, DEPLOY_HOST and DEPLOY_KNOWN_HOSTS, and the
+# variable DEPLOY_ENABLED=true (the deploy job is skipped without it).
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck
+      - run: yarn biome:ci
+      - run: yarn build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: out
+          path: out
+          include-hidden-files: true
+          retention-days: 7
+
+  deploy:
+    needs: build
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    env:
+      APP_DIR: /var/www/recvfund/docs
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: out
+          path: out
+      - name: SSH access
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          PORT: ${{ vars.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host server\n  HostName %s\n  Port %s\n  User deploy\n  IdentityFile ~/.ssh/deploy\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n' "$HOST" "$PORT" > ~/.ssh/config
+      - name: Upload the release
+        run: rsync -a --delete out/ "server:$APP_DIR/releases/$GITHUB_SHA/"
+      - name: Switch to the release
+        run: |
+          ssh server bash -s -- "$APP_DIR" "$GITHUB_SHA" <<'SH'
+          set -eu
+          cd "$1"
+          ln -sfn "releases/$2" current.next
+          mv -T current.next current
+          # Keep the active release and the four newest others.
+          ls -1t releases | grep -vxF "$2" | tail -n +5 | while read -r old; do rm -rf "releases/$old"; done
+          SH
+      - name: Check the public site
+        run: |
+          for _ in 1 2 3 4 5 6; do
+            if curl -fsS -o /dev/null "https://docs.recv.fund/"; then echo "https://docs.recv.fund/ answers"; exit 0; fi
+            sleep 5
+          done
+          echo "https://docs.recv.fund/ did not answer" >&2
+          exit 1

@@ -24,6 +24,31 @@ The hot wallet comes before registration because registration writes the hot wal
 
 Steps 2, 3 and 4 repeat for every chain you want to accept payments on. Step 4 also repeats for every project.
 
+## The setup guide in the dashboard
+
+The **Overview** page opens with a **Set up payments** panel that follows the same order as this guide. It shows what's done and what's left for the selected project, explains each step in a sentence or two, and links to the page where you do it. It doesn't change anything itself.
+
+The panel starts with a one-line summary of how money moves: the customer's wallet sends to that customer's deposit address, your hot wallet later sweeps it to your cold wallet, and the fee is taken only at the sweep. Then it lists these steps:
+
+1. **Site URL**: the address payment links and emails point to.
+2. **RPC node URL for each network**: how your server reads each blockchain.
+3. **recv.fund contract address**: the program ID (Solana) or factory address (Robinhood Chain). On a testnet install, the panel shows the published test addresses. Once an address is set, the panel shows the fee for new registrations.
+4. **Hot wallet**: assigned to the project, with some SOL or ETH for network fees.
+5. **Cold wallet and on-chain registration**: the one transaction you sign and pay for with your browser wallet.
+6. **Accepted currencies**: the tokens customers can pay with in this project.
+7. **Test payment**: done once a payment of the project reaches `FILLED` or `OVER_FILLED`.
+8. **Email (SMTP)**: optional; only payout approvals need it.
+
+Steps 2 through 6 list every active network. A step counts as done once one network is ready, so check the per-network lines for any other network you want to accept. The **Site URL** step stays open when the site URL differs from the address you opened the dashboard at, because payment links would point to the wrong place.
+
+Steps 4 through 7 belong to a project. When the sidebar shows **All projects**, choose a project in the panel to see them. A teammate whose role can't read a setting sees "Visible to owners and admins" (or a similar note) instead of a status. The panel hides itself when every required step is done. **Hide guide** and **Show guide** toggle it, and the browser remembers the choice.
+
+{/* prettier-ignore */}
+> [!NOTE]
+>
+> The setup guide is in builds made after release 0.1.1, published as the
+> `edge` images. Release 0.1.1 doesn't include it.
+
 ## What you need
 
 | Item | Why |

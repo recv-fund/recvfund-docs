@@ -33,12 +33,21 @@ On Robinhood Chain your merchant contract has no owner, cannot be upgraded or pa
 
 ## 1. Prepare registration
 
+A registration records three wallets, each with a different job:
+
+| Wallet | What it does | Who holds the key |
+| --- | --- | --- |
+| Admin wallet | Signs and pays for the registration. Afterwards it is the only wallet that can change the cold wallet or the hot wallet, or pause the registration. No funds go to it. It cannot be replaced. | You, in your browser wallet |
+| Cold wallet (settlement address) | Receives your money: every sweep sends deposits here, minus the fee. It can be the same address as the admin wallet. | You; the server only stores its address |
+| Hot wallet (sweeper) | Signs sweeps and pays their network fees. Sweeps can only send to the cold wallet, with the fee to recv.fund in the same transaction. | The server, encrypted |
+
 Fill in the "Prepare registration" form:
 
 1. **Network**: the chain to register on.
-2. **Merchant admin address**: press "Connect browser wallet" to fill it from the wallet, or paste it. This is the key that controls the record from now on.
+2. **Admin wallet (your browser wallet)**: press "Connect browser wallet" to fill it from the wallet, or paste it. Keep this wallet: it controls the registration from now on.
 3. **Cold wallet (settlement address)**: the wallet on that network that will receive your funds when deposits are swept. Type it carefully; it is checked for format, not ownership.
-4. **Label (optional)**: a name for the row.
+4. The form shows the **Hot wallet (sweeper)** assigned to the project for that network. Assign one under Hot wallets first if it says none.
+5. **Label (optional)**: a name for the row.
 
 Press "Prepare registration". The server locks the project and chain, creates a registration row in `pending` with a new merchant ID, and returns the transaction to sign. The row appears in the "Registered merchants" table (Project / network, Cold wallet, Sweeper, Status, Actions).
 

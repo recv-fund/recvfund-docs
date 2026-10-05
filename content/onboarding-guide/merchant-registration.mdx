@@ -29,7 +29,7 @@ On Robinhood Chain your merchant contract has no owner, cannot be upgraded or pa
 - The installation is connected to the recv.fund deployment for the network. This happens by itself; Nodes shows its state. Otherwise the form shows "An installation administrator must configure this network's deployed program in Nodes before registration."
 - An active hot wallet of the right family is assigned to the project. The form links to "Manage hot wallet assignments". Preparation is refused without it.
 - One project is selected in the sidebar workspace selector. With "All projects" selected the page only lists registrations.
-- Your browser has an injected wallet with a little native currency for the transaction fee: an EVM wallet such as MetaMask for Robinhood Chain, or Phantom, Solflare or another injected wallet for Solana. WalletConnect is not available in this release. On Robinhood Chain the wallet must be switched to the right chain (`4663` mainnet, `46630` testnet) before signing. On Solana the wallet must be set to the installation's network: on a testnet install, turn on Testnet Mode in Phantom's developer settings and choose Solana Devnet. Phantom sends on mainnet otherwise, and the transaction fails with "Unexpected error".
+- Your browser has an injected wallet with a little native currency for the transaction fee: an EVM wallet such as MetaMask for Robinhood Chain, or Phantom, Solflare or another injected wallet for Solana. WalletConnect is not available in this release. On Robinhood Chain use MetaMask: if several EVM wallets are installed, the form shows a button for each (for example "Connect MetaMask" and "Connect Phantom"), and when you sign, the page asks MetaMask to switch to Robinhood Chain and adds the network if MetaMask does not have it. On Solana, wallets supporting `signTransaction` sign locally and the installation sends the signed transaction through its configured RPC. If a wallet only supports `signAndSendTransaction`, select the installation’s network in that wallet; on a testnet install, use Solana Devnet. Keep enough SOL on that network for the registration fee.
 
 ## 1. Prepare registration
 
@@ -51,6 +51,8 @@ Fill in the "Prepare registration" form:
 
 Press "Prepare registration". The prepared transaction must be signed within about a minute on Solana; if it has expired, select **Manage** on the pending row and **Resume registration** to prepare it again. The server locks the project and chain, creates a registration row in `pending` with a new merchant ID, and returns the transaction to sign. The row appears in the "Registered merchants" table (Project / network, Cold wallet, Sweeper, Status, Actions).
 
+If you prepared a registration with the wrong admin or cold wallet and have not sent its transaction, select **Manage** on the pending row and **Discard and start over**, then prepare it again. The server first checks that the registration does not exist on chain; once its transaction has executed, it can only be confirmed.
+
 ## 2. Sign
 
 The "Sign and confirm" panel opens. It shows the current fee: "Current fee: N bps of each sweep. The rate in force when this transaction executes is stored with the registration and never changes; later changes apply only to new registrations." Below it is one transaction block with the signer, the contract and a button.
@@ -60,7 +62,7 @@ Registration is one transaction signed by the admin wallet on both chains:
 - **Robinhood Chain**: "1. Create merchant contract". The transaction calls `createMerchant(merchantId, settlementWallet, sweeper)` on the factory, which creates your merchant contract with the settlement wallet, the hot wallet as sweeper, and the fee terms in force at that moment. Press "Sign step 1" and approve it in the wallet. The page polls for the receipt for up to three minutes; if it is still pending, the button changes to "Check inclusion". A reverted transaction stops the flow; prepare again.
 - **Solana**: "1. Register merchant". The transaction contains one `register_merchant` instruction, which creates the merchant account with the settlement wallet, the hot wallet as sweeper, and the fee terms in force at that moment.
 
-The wallet must have the signer account selected and be on the transaction's chain; otherwise the page refuses with a message saying which account or chain to switch to. The submitted hash is shown in the block. Write it down if you might leave the page.
+The wallet must have the signer account selected. EVM wallets switch to the transaction’s chain before sending; Solana transactions normally use the installation’s RPC relay. The page explains an account mismatch, expired transaction or insufficient fee balance. The submitted hash is shown in the block. Write it down if you might leave the page.
 
 ## 3. Confirm on server
 

@@ -1,0 +1,263 @@
+# Payouts API
+
+A payout sends a token amount from the project's hot wallet to an address you name: a refund, an affiliate payment, a customer withdrawal. It is signed on your server with the hot wallet key that only your server holds, and broadcast by the payout worker. See [Payouts](https://docs.recv.fund/features/payouts.md) for the dashboard side and [Hot wallet](https://docs.recv.fund/onboarding-guide/hot-wallet.md) for setup.
+
+Three endpoints take the `API-Key` header:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/api/v1/withdrawal/merchant` | Create a payout request. |
+| GET | `/api/v1/withdrawal/{id}/merchant` | Read one payout. |
+| GET | `/api/v1/withdrawal/merchant` | List payouts with filters and pagination. |
+
+Not available through the API in this release: the address book (saved recipients), approving or rejecting a held payout, cancelling a payout, and editing limits. These are dashboard operations. Amounts are in token units; convert from USD with [`GET /api/v1/ticker`](https://docs.recv.fund/api-integration/payments-api/ticker.md).
+
+## Lifecycle
+
+| `status` | Meaning |
+| --- | --- |
+| `pending-otp-verification` | Dashboard requests only: waiting for the requester's email code. |
+| `pending-approval` | Waiting for an installation administrator to approve in the dashboard (email code). API requests land here unless automatic approval applies. |
+| `pending` | Approved; waiting for the worker. |
+| `initiated` | The signed transaction was broadcast, or a broadcast was attempted with an uncertain result. `txHash` is set. |
+| `sent` | The transaction is confirmed on chain with a matching transfer. `fee` is known. |
+| `processed` | Final bookkeeping done after `sent`. Terminal. |
+| `failed` | The transaction failed on chain or could not be sent. `failureReason` is set. Terminal. |
+| `rejected` | An administrator rejected it. Terminal. |
+| `cancelled` | Cancelled from the dashboard before a transaction hash existed. Terminal. |
+
+Normal path: `pending-approval` → `pending` → `initiated` → `sent` → `processed`. Treat `payout.sent` as the success event; `payout.processed` follows shortly after.
+
+Automatic approval: when the project has automatic approval enabled and the payout's USD value is at or below the project's automatic approval maximum, an API request is created as `pending` with an approval time and no approver, and goes straight to the worker. Otherwise it is `pending-approval` with `approvalReason` `above_auto_approve` or `auto_approve_disabled`. Automatic approval never overrides the minimum, the recipient limits or the balance check.
+
+## POST `/api/v1/withdrawal/merchant`
+
+Headers: `API-Key`, `Content-Type: application/json`, optional `Idempotency-Key`.
+
+```bash
+curl -X POST https://<your-site>/api/v1/withdrawal/merchant \
+  -H "API-Key: 811b12035f0dfa8ffd62296df3c98b27" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: refund-order-8812" \
+  -d '{
+    "email": "test@test.com",
+    "blockchainCode": "SOLANA",
+    "currencyCode": "USDC",
+    "amount": "100",
+    "toAddress": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+    "customerID": "1234"
+  }'
+```
+
+| Field | Type | Required | Constraints |
+| --- | --- | --- | --- |
+| `email` | string | yes | Recipient email, at most 320 characters. Stored lowercased on the payout; it does not change the customer's profile email. |
+| `blockchainCode` | string | yes | `SOLANA` or `ROBINHOOD`. The chain must be active on this install's network. |
+| `currencyCode` | string | yes | Currency code (`^[A-Z0-9]{1,16}$`). Must be active in the catalog and enabled for the project. |
+| `amount` | string | yes | Decimal string in token units, not USD: at most 22 integer and 18 fractional digits, positive, and representable in the currency's decimals. Numbers are rejected. |
+| `toAddress` | string | yes | Destination address, at most 128 characters. Must differ from the hot wallet's address. |
+| `customerID` | string | yes | Your identifier for the recipient. A missing customer is created; an inactive one is rejected. |
+| `idempotencyKey` | string | no | Same meaning as the header; the header wins when both are given. |
+
+`Idempotency-Key`: 1 to 128 printable non-space ASCII characters, scoped to the project. A replay with the same key and the same email, address, chain, currency, amount and customer returns `201` with the payout's current record, even if the currency has since been disabled. The same key with different terms is `409 PAYOUT_DUPLICATE_REQUEST`. Without a key, a request whose project, address, amount, currency and chain match a payout created within `payout.duplicateWindowSeconds` (default 300; 1 to 86400) by the API or the dashboard is `409 PAYOUT_DUPLICATE_REQUEST`.
+
+Checks, in USD at a fresh price, per recipient email per project: the minimum (`payout.minimumUsd`, default `1`, or the project's own minimum), the hourly and daily limits, and the automatic approval maximum. The token amount plus every non-terminal payout from the same hot wallet must fit the wallet's current balance.
+
+`201 Created`
+
+```json
+{
+  "id": 120,
+  "createdAt": "2026-06-19T13:14:41.806Z",
+  "updatedAt": "2026-06-19T13:14:41.806Z",
+  "blockchainCode": "SOLANA",
+  "currencyCode": "USDC",
+  "currencyType": "token",
+  "amount": "100",
+  "priceInUSD": "1",
+  "amountInUSD": "100.000000",
+  "toAddress": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+  "tokenAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "recipientEmail": "test@test.com",
+  "txHash": null,
+  "status": "pending-approval",
+  "type": "payout_merchant",
+  "attributes": "{\"approvalReason\":\"above_auto_approve\"}",
+  "createdBy": "api",
+  "fromAddress": null,
+  "failureReason": null,
+  "webhookStatus": "pending",
+  "fee": null
+}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | integer | Payout id, used in the read path and in webhooks as `payout_id`. |
+| `createdAt`, `updatedAt` | string | ISO 8601. |
+| `blockchainCode` | string | `SOLANA` or `ROBINHOOD`. |
+| `currencyCode` | string | Currency code, frozen at creation. |
+| `currencyType` | string | `native` or `token`. |
+| `amount` | string | Token amount as requested. |
+| `priceInUSD` | string | USD price of one token at creation. |
+| `amountInUSD` | string | USD value at creation, six decimals. |
+| `toAddress` | string | Destination. |
+| `tokenAddress` | string | Mint or contract; `native` for SOL, the zero address for ETH. |
+| `recipientEmail` | string | The `email` given. |
+| `txHash` | string or null | Set from `initiated` on. |
+| `status` | string | One of the nine statuses above. |
+| `type` | string | Always `payout_merchant`. |
+| `attributes` | string | A JSON string. `{"approvalReason":"above_auto_approve"}`, `{"approvalReason":"auto_approve_disabled"}` or `{}`. |
+| `createdBy` | string | `api` or `dashboard`. |
+| `fromAddress` | string or null | The hot wallet address once assigned. |
+| `failureReason` | string or null | Set on `failed`. |
+| `webhookStatus` | string or null | `pending`, `received`, `failed`, or `null` when the project has no endpoints. |
+| `fee` | string or null | Actual network fee in the chain's native token (SOL or ETH) once known, `null` before. Solana account rent is not included. |
+
+### Errors
+
+| Status | `code` | Cause |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST` | Field validation (including a numeric `amount` or a missing `customerID`); invalid `Idempotency-Key`; the chain is not on this install's network; the amount is not representable in the currency's decimals or outside the supported range; destination equals the hot wallet; USD value outside the supported range. |
+| 400 | `PAYOUT_AMOUNT_BELOW_MINIMUM` | USD value below the minimum. `message` names the minimum. |
+| 400 | `PAYOUT_CURRENCY_DISABLED` | The currency is not enabled for the project, or its chain is inactive. |
+| 400 | `PAYOUT_NO_HOT_WALLET` | No active hot wallet of that chain family is assigned to the project. |
+| 401 | `UNAUTHORIZED` | Invalid API key. |
+| 409 | `PAYOUT_DUPLICATE_REQUEST` | Idempotency key reused with different terms, or a matching payout inside the duplicate window. |
+| 409 | `CONFLICT` | Customer inactive; project inactive; hot wallet unavailable; hot wallet balance insufficient after pending reservations; the recipient's hourly or daily limit exceeded. |
+| 429 | `RATE_LIMITED` | Per-key limit exhausted. |
+| 503 | `EXCHANGE_RATE_UNAVAILABLE` | No fresh USD price for the currency. Stablecoins never fail this way. |
+| 503 | `UNAVAILABLE` | A payout policy setting is invalid, or Redis is unreachable. |
+
+Creation, customer upsert, balance reservation and the webhook row are one transaction; on any failure nothing is stored.
+
+## GET `/api/v1/withdrawal/{id}/merchant`
+
+```bash
+curl https://<your-site>/api/v1/withdrawal/120/merchant \
+  -H "API-Key: 811b12035f0dfa8ffd62296df3c98b27"
+```
+
+| Parameter | In | Constraints |
+| --- | --- | --- |
+| `id` | path | Integer, 1 to 2147483647. |
+
+`200 OK` with the same object as the create response, at its current state:
+
+```json
+{
+  "id": 120,
+  "createdAt": "2026-06-19T13:14:41.806Z",
+  "updatedAt": "2026-06-19T13:18:02.114Z",
+  "blockchainCode": "SOLANA",
+  "currencyCode": "USDC",
+  "currencyType": "token",
+  "amount": "100",
+  "priceInUSD": "1",
+  "amountInUSD": "100.000000",
+  "toAddress": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+  "tokenAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "recipientEmail": "test@test.com",
+  "txHash": "5KjP2n8vQ4wR7tY1uI3oA6sD9fG2hJ4kL7zX0cV5bN8mQ1wE3rT6yU9iO2pA5sD8f",
+  "status": "sent",
+  "type": "payout_merchant",
+  "attributes": "{}",
+  "createdBy": "api",
+  "fromAddress": "HotWa11etAddre55xxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "failureReason": null,
+  "webhookStatus": "received",
+  "fee": "0.000005"
+}
+```
+
+Errors: `400 BAD_REQUEST` when `id` is not an integer in range, `401 UNAUTHORIZED`, `404 NOT_FOUND` (`Payout not found`) when the id is unknown or belongs to another project, `429 RATE_LIMITED`.
+
+## GET `/api/v1/withdrawal/merchant`
+
+```bash
+curl "https://<your-site>/api/v1/withdrawal/merchant?status[]=sent&status[]=processed&createdAfter=2026-09-01T00:00:00Z&limit=50&sortBy=id&order=ASC" \
+  -H "API-Key: 811b12035f0dfa8ffd62296df3c98b27"
+```
+
+| Parameter | Type | Default | Constraints |
+| --- | --- | --- | --- |
+| `limit` | integer | `100`, or `payout.listPageCap` if lower | 1 to 1000000 accepted; the effective page size is clamped to `payout.listPageCap` (default 100; 1 to 1000). |
+| `offset` | integer | `0` | 0 to 1000000. |
+| `order` | string | `DESC` | `ASC` or `DESC`. |
+| `sortBy` | string | `created_at` | `created_at`, `amount`, `id` or `status`. Ties are broken by id in the same direction. |
+| `greaterThanID` | integer | | Exclusive lower bound on `id`. Must be below `lessThanID` when both are given. |
+| `lessThanID` | integer | | Exclusive upper bound on `id`. |
+| `createdAfter`, `createdBefore` | string | | ISO 8601 with timezone; exclusive. `createdAfter` must be before `createdBefore`. |
+| `updatedAfter`, `updatedBefore` | string | | Same rules on `updatedAt`. |
+| `status[]` | string, repeatable | | Any of the nine statuses. At most 50 values. |
+| `blockchainCode[]` | string, repeatable | | `SOLANA` or `ROBINHOOD`. At most 50 values. |
+| `toAddress[]`, `fromAddress[]` | string, repeatable | | Exact addresses, at most 50 each. Case-insensitive on Robinhood Chain, case-sensitive on Solana. |
+| `recipientEmails[]` | string, repeatable | | Email addresses, at most 50, case-insensitive. |
+| `search` | string | | Literal substring (`%` and `_` are not wildcards), case-insensitive, over destination, source address, recipient email and transaction hash. At most 128 characters. |
+
+Repeat array parameters with the bracket name: `status[]=pending&status[]=sent`. A single value without repetition also works.
+
+`200 OK`, a bare JSON array of payout objects in the shape of the single read. Paginate with `offset`, or with `greaterThanID` and `sortBy=id&order=ASC` for a stable cursor, until a page returns fewer rows than the effective page size. Because a requested `limit` above the cap is silently clamped, compare against the number of rows you receive, not against the `limit` you sent.
+
+Errors: `400 BAD_REQUEST` for any parameter outside its constraints or an inverted range, `401 UNAUTHORIZED`, `429 RATE_LIMITED`, `503 UNAVAILABLE` when `payout.listPageCap` is invalid.
+
+## Payout webhooks
+
+Every persisted status transition posts one event to every active endpoint of the project, with the same headers, signature, retry schedule and delivery guarantees as the [payment webhook](https://docs.recv.fund/api-integration/payments-api/webhook.md). Idempotency on the sending side is per payout and status, so one status produces one delivery per endpoint. Resending an approval code or adding a note produces no event.
+
+| Database `status` | `X-Recv-Event` / `event_type` | Payload `status` |
+| --- | --- | --- |
+| `pending-approval`, `pending-otp-verification` | `payout.pending-approval` | `PENDING_APPROVAL`, `PENDING_OTP_VERIFICATION` |
+| `pending` | `payout.approved` | `PENDING` |
+| `initiated` | `payout.initiated` | `INITIATED` |
+| `sent` | `payout.sent` | `SENT` |
+| `processed` | `payout.processed` | `PROCESSED` |
+| `failed` | `payout.failed` | `FAILED` |
+| `rejected` | `payout.rejected` | `REJECTED` |
+| `cancelled` | `payout.cancelled` | `CANCELLED` |
+
+The payload `status` is the database status in upper case with underscores, so it does not always match the event name (`payout.approved` carries `PENDING`).
+
+```json
+{
+  "event_type": "payout.sent",
+  "payout_id": 120,
+  "network": "SOLANA",
+  "token": "USDC",
+  "amount": "100",
+  "amount_usd": "100.000000",
+  "email": "test@test.com",
+  "address": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+  "from_address": "HotWa11etAddre55xxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "tx_hash": "5KjP2n8vQ4wR7tY1uI3oA6sD9fG2hJ4kL7zX0cV5bN8mQ1wE3rT6yU9iO2pA5sD8f",
+  "status": "SENT",
+  "withdrawal_type": "payout_merchant",
+  "currency_type": "token",
+  "created_at": 1750340081,
+  "updated_at": 1750340282,
+  "timestamp": 1750340282,
+  "failure_reason": "",
+  "network_fee_raw": "5000"
+}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `event_type` | string | The event name, same as `X-Recv-Event`. |
+| `payout_id` | integer | The payout `id`. |
+| `network` | string | `SOLANA` or `ROBINHOOD`. |
+| `token` | string | Currency code. |
+| `amount` | string | Token amount. |
+| `amount_usd` | string | USD value at creation, six decimals. |
+| `email` | string | Recipient email. |
+| `address` | string | Destination. |
+| `from_address` | string | Hot wallet address, or `""` before assignment. |
+| `tx_hash` | string | Transaction hash, or `""` before broadcast. |
+| `status` | string | Upper-case database status. |
+| `withdrawal_type` | string | Always `payout_merchant`. |
+| `currency_type` | string | `native` or `token`. |
+| `created_at`, `updated_at`, `timestamp` | integer | Unix seconds: creation, last update, and when the event was recorded. |
+| `failure_reason` | string | Reason on `failed`, otherwise `""`. |
+| `network_fee_raw` | string or null | Actual network fee in base units of the native token once known. Not part of PayRam's payload. |
+
+Handle payout events like payment events: verify the signature, deduplicate on `X-Recv-Delivery`, and expect duplicates and out-of-order arrivals. The `initiated` event is committed before the broadcast is attempted, so an `initiated` followed by nothing for a while means the worker is waiting for confirmations or for the next attempt, not that the payout was lost; read the payout to see its current status.

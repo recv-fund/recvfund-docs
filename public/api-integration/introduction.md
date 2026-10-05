@@ -1,0 +1,149 @@
+# API integration
+
+Your recv.fund install serves a JSON API for your own systems: create payments, read their status, assign deposit addresses, create payouts and receive webhooks. Paths and field names follow PayRam's payments and payouts API, so an integration written for PayRam ports with a host change and a new key. The differences are listed at the end of this page.
+
+The API runs on your server. Nothing in a request or a webhook passes through anything we operate.
+
+## Base URL
+
+```
+https://<your-site>/api/v1
+```
+
+`<your-site>` is the site URL of your install. The dashboard, the hosted checkout page and the API share one origin; there is no separate API port. The address is set at install time and can be changed under Settings in the dashboard (see [Advanced setup](https://docs.recv.fund/deployment-guide/advanced-setup.md)).
+
+## Authentication
+
+Every merchant endpoint takes the header `API-Key`. Keys are created per project in the dashboard under Developers, section API keys ([API keys](https://docs.recv.fund/features/api-keys.md)). A key is 32 hexadecimal characters and is shown once at creation; only a hash is stored.
+
+```bash
+curl https://<your-site>/api/v1/payment/reference/c80f5363-0397-4761-aa1a-3155c3a21470 \
+  -H "API-Key: 811b12035f0dfa8ffd62296df3c98b27"
+```
+
+- Every request is scoped to the key's project. A payment or payout that belongs to another project returns `404`.
+- A missing, malformed, revoked or otherwise inactive key, and a key whose project is inactive, all return `401` with code `UNAUTHORIZED` and the message `Invalid API key`. Revocation takes effect on the next request.
+- A project key does not authorize dashboard routes, and a dashboard session does not authorize these routes.
+- The checkout endpoints under `/api/v1/checkout` take no key. They are public, keyed by the payment's reference id, and rate limited per IP address.
+
+Send `Content-Type: application/json` on requests with a body. Bodies are limited to 2 MB.
+
+## Responses and errors
+
+Successful responses are the bare JSON documented on each page, with no envelope. Every response carries `Cache-Control: no-store`.
+
+Errors are one object:
+
+```json
+{ "code": "NOT_FOUND", "message": "Payment not found" }
+```
+
+| HTTP status | `code` | When |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST` | Validation failed. `message` lists the failed constraints, separated by `; `. |
+| 401 | `UNAUTHORIZED` | The API key is missing, malformed, revoked or belongs to an inactive project. |
+| 403 | `FORBIDDEN` | Not used by the merchant endpoints in this release. |
+| 404 | `NOT_FOUND` | The reference id, payout id or path is unknown to this project. |
+| 409 | `CONFLICT` | The request is valid but the record's state does not allow it. |
+| 429 | `RATE_LIMITED` | The per-key or per-IP limit for the current minute is exhausted. |
+| 503 | `UNAVAILABLE` | A platform setting the endpoint depends on is invalid, or Redis is unreachable for a keyed route. |
+| 500 | `INTERNAL_ERROR` | Unexpected failure. `message` is generic and never contains internal detail. |
+
+Payout creation replaces the generic `code` with a specific one for some failures. They are listed in the [Payouts API](https://docs.recv.fund/api-integration/payouts-api.md).
+
+## Rate limits
+
+Both limits are platform settings, editable in the dashboard. The values below are the defaults.
+
+| Setting | Default | Scope | Applies to |
+| --- | --- | --- | --- |
+| `rateLimit.publicApi.perMinute` | `300` | per API key, fixed 60 second window | every endpoint that takes `API-Key` |
+| `rateLimit.checkout.perMinute` | `120` | per client IP address, fixed 60 second window | every endpoint under `/api/v1/checkout` |
+
+Counters live in Redis. If Redis is unreachable, keyed routes answer `503` (they fail closed); checkout routes let the request through. An exhausted window answers `429` with code `RATE_LIMITED`. `rateLimit.publicApi.perMinute` accepts 1 to 10000.
+
+## Idempotency
+
+- **Payments.** `POST /api/v1/payment` has no idempotency key. Every accepted request creates a new payment. `invoiceID` is a label that is echoed back; it does not deduplicate.
+- **Payouts.** `POST /api/v1/withdrawal/merchant` accepts an `Idempotency-Key` header (or an `idempotencyKey` body field; the header wins). Replaying the same key with the same request returns the original payout. The same key with different terms returns `409 PAYOUT_DUPLICATE_REQUEST`. Without a key, a payout that matches a recent one on project, destination address, amount, currency and chain within `payout.duplicateWindowSeconds` (default 300) is also rejected with `409 PAYOUT_DUPLICATE_REQUEST`. Details are in the [Payouts API](https://docs.recv.fund/api-integration/payouts-api.md).
+- **Webhooks.** Delivery is at least once. Deduplicate on the `X-Recv-Delivery` header. See [Payment webhook](https://docs.recv.fund/api-integration/payments-api/webhook.md).
+
+## Test mode
+
+There is no per-request test flag. An install runs against either mainnet or the test networks (Solana devnet and Robinhood Chain testnet), chosen at install time by `NETWORK_TYPE`. On a testnet install every payment is a test payment: the checkout URL returned by create payment ends in `&test=true`, payment status reports `"testMode": true`, and the checkout endpoints report `"isTest": true`. A client cannot switch network with a query parameter. Chains and tokens per network are listed under [Networks](https://docs.recv.fund/support/networks.md).
+
+## The reference id
+
+Every payment has a `reference_id`: a version 4 UUID generated by the server at creation. It appears in the checkout URL (`/payments?reference_id=<uuid>`), in every path under `/api/v1/*/reference/{reference_id}`, in the checkout endpoints and in every payment webhook. A path parameter that is not a version 4 UUID returns `400 BAD_REQUEST`. Your own `invoiceID` is stored as a label and returned as `invoiceID` (status) and `invoice_id` (webhook); it is not unique and cannot be used to look a payment up.
+
+The reference id is not written on chain. A payment on chain is a plain transfer to the customer's deposit address; the server links it to the payment.
+
+## Minimal end-to-end flow
+
+1. Create a payment from your server.
+
+   ```bash
+   curl -X POST https://<your-site>/api/v1/payment \
+     -H "API-Key: 811b12035f0dfa8ffd62296df3c98b27" \
+     -H "Content-Type: application/json" \
+     -d '{"customerEmail":"a@example.com","customerID":"1234","amountInUSD":"50","invoiceID":"INV-0090"}'
+   ```
+
+   ```json
+   {
+     "host": "https://pay.example.com",
+     "reference_id": "c80f5363-0397-4761-aa1a-3155c3a21470",
+     "url": "https://pay.example.com/payments?reference_id=c80f5363-0397-4761-aa1a-3155c3a21470&host=https%3A%2F%2Fpay.example.com"
+   }
+   ```
+
+2. Store `reference_id` against your order and redirect the customer to `url`. The hosted checkout page lets the customer pick a currency, shows the amount and a deposit address or a wallet payment button, and polls for progress.
+
+3. Receive the webhook. Each state change posts a signed JSON body to every active endpoint of the project. Verify `X-Recv-Signature`, deduplicate on `X-Recv-Delivery`, then act on `status` (`FILLED`, `PARTIALLY_FILLED`, `OVER_FILLED`, `CANCELLED`).
+
+4. Confirm before fulfilling. Read `GET /api/v1/payment/reference/{reference_id}` from your server and check `paymentState`. Never fulfill an order from the checkout page or from a webhook body alone.
+
+If you do not want the hosted page, the same flow works with your own page built on the [checkout endpoints](https://docs.recv.fund/api-integration/checkout-endpoints.md), or with a deposit address from [Assign deposit address](https://docs.recv.fund/api-integration/payments-api/assign-deposit-address.md).
+
+## Endpoints
+
+| Method | Path | Key | Page |
+| --- | --- | --- | --- |
+| POST | `/api/v1/payment` | `API-Key` | [Create payment](https://docs.recv.fund/api-integration/payments-api/create-payment.md) |
+| GET | `/api/v1/blockchain-currency/reference/{reference_id}` | `API-Key` | [Deposit options](https://docs.recv.fund/api-integration/payments-api/deposit-options.md) |
+| POST | `/api/v1/deposit-address/reference/{reference_id}` | `API-Key` | [Assign deposit address](https://docs.recv.fund/api-integration/payments-api/assign-deposit-address.md) |
+| GET | `/api/v1/payment/reference/{reference_id}` | `API-Key` | [Payment status](https://docs.recv.fund/api-integration/payments-api/payment-status.md) |
+| POST to your URL | payment events | signature | [Payment webhook](https://docs.recv.fund/api-integration/payments-api/webhook.md) |
+| GET | `/api/v1/checkout/{reference_id}` | none | [Checkout endpoints](https://docs.recv.fund/api-integration/checkout-endpoints.md) |
+| POST | `/api/v1/checkout/{reference_id}/select` | none | [Checkout endpoints](https://docs.recv.fund/api-integration/checkout-endpoints.md) |
+| POST | `/api/v1/checkout/{reference_id}/payTransaction` | none | [Checkout endpoints](https://docs.recv.fund/api-integration/checkout-endpoints.md) |
+| POST | `/api/v1/checkout/{reference_id}/confirm` | none | [Checkout endpoints](https://docs.recv.fund/api-integration/checkout-endpoints.md) |
+| POST | `/api/v1/withdrawal/merchant` | `API-Key` | [Payouts API](https://docs.recv.fund/api-integration/payouts-api.md) |
+| GET | `/api/v1/withdrawal/merchant` | `API-Key` | [Payouts API](https://docs.recv.fund/api-integration/payouts-api.md) |
+| GET | `/api/v1/withdrawal/{id}/merchant` | `API-Key` | [Payouts API](https://docs.recv.fund/api-integration/payouts-api.md) |
+
+## PayRam compatibility
+
+Identical to PayRam in this release:
+
+- Header name `API-Key`, key format (32 hexadecimal characters), per-project scope.
+- Paths: `POST /api/v1/payment`, `GET /api/v1/blockchain-currency/reference/{reference_id}`, `POST /api/v1/deposit-address/reference/{reference_id}`, `GET /api/v1/payment/reference/{reference_id}`, `POST /api/v1/withdrawal/merchant`, `GET /api/v1/withdrawal/merchant`, `GET /api/v1/withdrawal/{id}/merchant`.
+- Request field names on those endpoints, the create-payment response (`host`, `reference_id`, `url`) and the checkout URL pattern `/payments?reference_id=<uuid>&host=<url>` with `&test=true` on test networks.
+- `paymentState` values `OPEN`, `PARTIALLY_FILLED`, `FILLED`, `OVER_FILLED`, `CANCELLED`.
+- The PascalCase keys of the deposit address response (`Address`, `Family`, `Status`, `MemberID`, `BlockchainFamilyID`).
+- Payout request fields, the nine payout statuses, the `payout.<status>` webhook event names and the payout webhook payload fields.
+- Payment webhook payload field names, and `X-Payram-Signature` carrying an HMAC-SHA256 of the raw body as `sha256=<hex>`.
+
+Different from PayRam:
+
+- **Chains and currencies.** `blockchainCode`, `network` and `blockchain_code` accept only `SOLANA` and `ROBINHOOD`. `family` is `solana` or `evm`; `standard` is `native`, `spl` or `erc20`. Native currencies report `tokenAddress` as `native` on Solana and the zero address on Robinhood Chain.
+- **Webhook signing key.** The HMAC key is the endpoint's own secret, created with the endpoint under Developers, section Webhook endpoints. PayRam signs with the project API key. `X-Recv-Signature`, `X-Recv-Event` and `X-Recv-Delivery` are added; PayRam's `API-KEY` header is not sent.
+- **Webhook events.** Every delivery carries an explicit event name in `X-Recv-Event`, including `payment.open` on creation and `payment.confirming` for confirmation progress. Retries use one configurable schedule for every event; there is no separate short cycle for progress events.
+- **`GET /api/v1/ticker`** returns every active currency with its current USD price, needs no API key, and fails as a whole with 503 if any price is unavailable. See [Ticker](https://docs.recv.fund/api-integration/payments-api/ticker.md). Payout amounts are in token units; convert with the ticker.
+- **Payment status** returns more fields than PayRam documents (`currency`, `network`, `filledAmount`, `filledAmountInUSD`, `depositAddress`, `confirmationCurrent`, `confirmationRequired`, `expiresAt`, `testMode`).
+- **Deposit address response** contains only the seven fields listed on its page; PayRam's nested `Member`, `BlockchainFamily`, `wallet` and `xpub_id` are absent. The endpoint returns `200`, and repeating it for the same chain is safe.
+- **Payouts.** `mobileNumber` and `residentialAddress` are not accepted. `currencyType` is `native` or `token` (PayRam: `coin` or `token`). The list endpoint sorts by `created_at` by default, has no `types[]`, `recipientIDs[]`, `startDate` or `endDate` parameters, and returns the same object as the single read (no `uniqueTxHash`, `txIndex`, `blockHash`, `blockNumber`, `retryCount`, `memberID`, `externalPlatformID`, `currencyID` or `blockchainID`). The create response includes the read-only fields (`updatedAt`, `fee`, `fromAddress`, `failureReason`, `webhookStatus`) from the start. Missing `customerID` is a `400`, not a `500`. `payout.processed` is delivered.
+- **Amounts.** `amountInUSD` on create payment may be a JSON number or a decimal string; the server parses numbers without precision loss. Payout `amount` must be a decimal string.
+- **Error bodies** are always `{ "code": "...", "message": "..." }`, including for validation and rate-limit failures.
+- **Checkout endpoints** exist for merchants who build their own page; PayRam has no documented equivalent.
+- **Fees.** The service fee is taken on chain only when a deposit address is swept, at the rate fixed in your merchant registration, not by the software and never when a customer pays. See [Sweeps](https://docs.recv.fund/features/sweeps.md).

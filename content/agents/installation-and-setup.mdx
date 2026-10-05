@@ -1,0 +1,52 @@
+---
+title: Agent installation and setup workflow
+description: An ordered, evidence-based path from a fresh instance to a confirmed test payment and settlement.
+---
+
+# Installation and setup
+
+Start with the [deployment guide](/deployment-guide/introduction/). The public website is not a shared merchant API: each merchant runs an instance on its own origin.
+
+## Collect the required context
+
+Ask for the instance hostname, hosting environment, desired network, project name and settlement wallet. Check whether an installation already exists before running an installer. Confirm ownership of the hostname, backups and any existing database before changing infrastructure.
+
+Never run `--reset` to solve a routine setup problem. It removes the database. Never replace `AES_ENCRYPTION_KEY` on an existing database: encrypted wallet keys depend on it. Do not ask a user to paste private keys or seed phrases into chat.
+
+## Follow this order on one network
+
+| Step | Action | Evidence to record |
+| --- | --- | --- |
+| Install | Run the documented versioned installer on supported Linux; use testnet first | Image version, HTTPS origin and datastore health |
+| Owner | User creates the one-time owner account at `/signup` | Authenticated dashboard and first project |
+| Public URL | Installation → Site URL must match the merchant's reachable origin | Payment links resolve from a separate browser |
+| Network | Nodes → choose one network, verify active RPC and program/factory | Successful live node check and readable expected deployment |
+| Hot wallet | Create/import through the dashboard, assign to the project and fund network fees | Address, family, assignment, live native balance; never record key material |
+| Register | Connect the merchant admin's browser wallet; verify settlement/sweeper and sign | Confirmed registration belonging to the correct admin on that network |
+| Currency | Enable at least one currency on that same registered network | Currency appears in checkout options |
+| Receive | Create a small test invoice and pay on that network | Confirmed on-chain transfer and `FILLED` or `OVER_FILLED` server state |
+| Notify | Configure an endpoint and keep its signing secret in the merchant backend | Signature validated and one durable fulfilled order |
+| Settle | Review and authorize a sweep | Confirmed sweep, settlement wallet receipt and fee event |
+
+The hot wallet pays sweep gas. Customer deposits travel from deposit addresses to the registered settlement wallet and fee collector; they do not pass through the hot wallet. Payouts, by contrast, are funded from the hot wallet.
+
+## Use readiness without overstating it
+
+```bash
+curl --fail-with-body --silent --show-error \
+  "$RECV_ORIGIN/api/v1/integration/capabilities"
+
+curl --fail-with-body --silent --show-error \
+  -H "API-Key: $RECV_API_KEY" \
+  "$RECV_ORIGIN/api/v1/integration/readiness"
+```
+
+`RECV_ORIGIN` is an HTTPS origin you own. Load `RECV_API_KEY` locally from a secret manager. Do not use shell tracing (`set -x`) or print environment contents. Request tooling must redact authentication headers.
+
+A configured RPC node may be unreachable. A positive gas balance may be insufficient for the next transaction. A configured webhook may never have delivered. A historical confirmed invoice does not prove that the current release, RPC or wallet remains operational. Readiness presents these as separate facts.
+
+For first use, configure one network completely, receive and settle a test payment, then repeat for the next network. This is easier to diagnose than enabling every option at once.
+
+## Release acceptance
+
+Run a funded testnet flow through the exact installed image, HTTPS proxy, intended RPC, mail provider and webhook receiver. Exercise backup and restore before mainnet. Automated local-chain tests and static contract analysis complement this rehearsal; they do not replace it.

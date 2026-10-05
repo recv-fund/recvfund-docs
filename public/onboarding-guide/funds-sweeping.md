@@ -1,0 +1,64 @@
+# Funds sweeping
+
+A sweep moves the balance of one customer deposit address, in one currency, to your settlement wallet. It is signed by the project's hot wallet, the address registered on-chain as your sweeper. On Solana it calls the program's `sweep_token` or `sweep_sol` instruction; on Robinhood Chain it calls `sweepToken` or `sweepNative` on your merchant contract. In that transaction the balance minus the fee goes to your registered settlement wallet and the fee goes to the fee collector recorded in your registration. A sweep is the only way funds leave a deposit address, and it has no other destination.
+
+Every customer payment arrives at a deposit address, whether it was sent from a connected wallet on the checkout page or from any other wallet or exchange. Sweeps therefore cover all received funds, including deposits that matched no invoice. An inactive registration still allows sweeps.
+
+Open Sweeps in the sidebar (`/wallets/sweeps`). Every member can read it; owners, admins and project leads can queue sweeps and change settings, with one project selected in the sidebar.
+
+## Automatic sweeps
+
+The scheduler runs once a minute while the watchers are enabled. Each pass visits up to five projects and one chain per project, and reads the balances of up to 20 deposit addresses per visit. Every project has its own settings, shown at the bottom of the page under "Automatic sweep settings":
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| Minimum eligible balance (USD) | 5 | Activation threshold. A deposit asset counts as eligible when its USD value reaches this. Smaller balances are ignored by the scheduler. |
+| Amount trigger (USD) | 50 | Queue when the eligible balances observed across the project's addresses on that chain add up to this. |
+| Address count trigger | 25 | Queue when this many distinct addresses hold an eligible balance. |
+| Interval trigger (minutes) | 1440 | Queue when the oldest eligible address has waited this long since it was last swept (or first funded). |
+| Enable automatic sweeps when the scheduler is available | on | The switch for automatic queueing in this project. Off means manual only. |
+
+Triggers are checked in the order amount, count, time. When one fires, the observed group of addresses is queued: each is re-read, and any that is now empty, below the minimum or unreadable is skipped. Because the scheduler visits addresses in pages, the interval is the age at which an address becomes due, not the exact minute it is swept.
+
+The defaults are the installation values (`sweep.activationUsd`, `sweep.amountUsd`, `sweep.addressCount`, `sweep.intervalMinutes`, `sweep.enabled`). The form's description says "Using installation defaults" until you save an override; "Use installation defaults" removes the overrides again. Changing the settings discards the scheduler's current observations, and disabling automatic sweeps does not cancel transactions already queued or signed.
+
+## Manual sweeps
+
+The "Customer deposit balances" section starts empty. Press "Check balances": the server reads the live balance of every deposit address of the project in every catalog currency, 25 addresses per page, and prices it. Each row shows the Deposit address and customer, the Asset, the Balance, the USD value, whether the automatic minimum is Met or Below minimum, and a "Queue sweep" button.
+
+"Queue sweep" queues that one address and asset. It ignores the activation minimum and the enable switch, so any positive balance can be swept by hand, and only balances that could actually be read and priced are offered; a row with a balance or price error shows the error instead. The page answers "Sweep queued. Confirmation will appear in the history below." Nothing is broadcast inside the request; the worker picks the row up on its next pass, which also needs the watchers to be enabled.
+
+## Sweep history
+
+The "Sweep history" table lists every sweep of the project: Sweep number with the deposit and its trigger (`amount`, `count`, `time` or `manual`), Asset, Amount with its USD value, Program fee, Status, Transaction hash and Created time. Filter by status or press "Refresh history"; the table refreshes itself every 10 seconds while a row is pending or sent.
+
+| Status | Meaning |
+| --- | --- |
+| `pending` | Queued, not yet signed or broadcast. |
+| `sent` | A broadcast attempt was made. Not yet proof of inclusion. |
+| `confirmed` | The sweep's `DepositSwept` event was verified with the required confirmations. Amount and Program fee are replaced by the actual values from the event. |
+| `failed` | Rejected before signing (for example no assigned active hot wallet, or the deposit is empty) or the transaction failed on-chain. The reason is shown under the status. |
+
+Amounts are estimates until a sweep is confirmed; until then the fee column reads "Awaiting receipt".
+
+## Network fee and recv.fund fee
+
+Two different costs apply to every sweep:
+
+- **The network fee** (gas on Robinhood Chain, the transaction fee on Solana) is paid by the hot wallet in native currency. Keep it funded; see [Hot wallet](https://docs.recv.fund/onboarding-guide/hot-wallet.md). A wallet that cannot pay produces a failed row, and the scheduler waits an hour before trying that address and asset again automatically. A manual queue retries at once.
+- **The recv.fund fee** is taken from the swept amount, in the swept currency, at the rate recorded in your registration when it was confirmed (the panel showed "Fee: N bps of each sweep"). The fee is the amount times the rate divided by 10,000, rounded down, so the rounding remainder stays with you. The rate cannot exceed 200 basis points (2%) and cannot change for your registration, neither from your installation nor by recv.fund. It appears in the Program fee column once the sweep is confirmed. The value "Fee for new registrations" under Nodes applies only to registrations made later.
+
+If the fee collector cannot receive the fee, the sweep still completes and the fee goes to your settlement wallet instead; the Program fee column then shows 0. On Robinhood Chain this happens when the collector rejects ETH, uses up the fixed gas allowance of the fee transfer, or the token blocks transfers to it; on Solana when a SOL fee would leave the collector below rent exemption, or when the collector's token account is frozen. No account that recv.fund controls can block a sweep. On Robinhood Chain a sweep that owes a fee reverts with `InsufficientGas()` if too little gas is supplied, so the fee cannot be skipped by underfunding the transaction.
+
+## What happens to the deposit account
+
+On Solana a token sweep transfers the balance and closes the deposit token account; the next deposit in that token recreates it. A native SOL sweep empties the deposit account. On Robinhood Chain the first sweep of a deposit address deploys a small forwarder contract there, paid for by the hot wallet as part of that sweep's gas; the forwarder stays deployed, so later sweeps of the same address reuse it and cost less. In every case the deposit address itself is permanent: the customer can keep sending to it.
+
+## Execution details worth knowing
+
+- Sweeps and payouts from the same hot wallet are signed one at a time. A pending transaction from the wallet blocks later signing on that chain until it is resolved.
+- The signed transaction is stored, encrypted, before it is broadcast. If the RPC response is lost, the worker rebroadcasts the identical bytes; it never rebuilds a transaction with a new nonce or blockhash on its own.
+- A sweep whose outcome cannot be determined (for example an expired Solana blockhash with no transaction found) stays in its state for manual review and keeps the wallet reserved. Operator tools for resolving such rows are not available in this release.
+- The execution switch is `watcher.enabled`; the project's "Enable automatic sweeps" switch only controls automatic queueing.
+
+See [Sweeps](https://docs.recv.fund/features/sweeps.md) for the feature reference.

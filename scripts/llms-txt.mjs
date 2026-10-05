@@ -1,14 +1,12 @@
 /*
- * Writes public/llms.txt: one line per documentation page, grouped by
- * section, for language-model readers. The title and description come from
- * each page's front matter, the route from its path under content/.
- * Runs before `next build` (see package.json) so the file is exported with
- * the site; the generated file is also committed so any host serves it.
+ * Exports the documentation index, full text and linked Markdown pages.
+ * Runs before the static build so agents and browsers read the same content.
  */
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = new URL('..', import.meta.url).pathname;
+const root = fileURLToPath(new URL('..', import.meta.url));
 const contentDir = join(root, 'content');
 const siteUrl = 'https://docs.recv.fund';
 
@@ -72,15 +70,21 @@ const sectionTitles = {
   features: 'Features',
   'api-integration': 'API integration',
   support: 'Support',
+  agents: 'AI agent guide',
 };
 
 const pages = listMdx(contentDir)
   .map((file) => {
-    const fields = frontMatter(readFileSync(file, 'utf8'));
+    const source = readFileSync(file, 'utf8');
+    const fields = frontMatter(source);
+    const markdownPath = relative(contentDir, file).replace(/\.mdx$/, '.md');
+    const markdown = source.replace(/^---\n[\s\S]*?\n---\n*/, '');
     const route = routeOf(file);
     const section = route.split('/')[1] ?? '';
     return {
       route,
+      markdown,
+      markdownPath,
       section: section in sectionTitles ? section : '',
       depth: route.split('/').length,
       order: metaIndex(file),
@@ -99,22 +103,65 @@ const pages = listMdx(contentDir)
       a.order - b.order,
   );
 
+const markdownRoutes = new Map(
+  pages.map((page) => [page.route, page.markdownPath]),
+);
+for (const page of pages) {
+  page.markdown = page.markdown.replace(
+    /\[([^\]]+)\]\((\/[^)\s]*)\)/g,
+    (_, label, href) => {
+      const url = new URL(href, siteUrl);
+      const route = url.pathname.endsWith('/')
+        ? url.pathname
+        : `${url.pathname}/`;
+      const markdownPath = markdownRoutes.get(route);
+      if (markdownPath) url.pathname = `/${markdownPath}`;
+      return `[${label}](${url.href})`;
+    },
+  );
+  mkdirSync(
+    join(root, 'public', ...page.markdownPath.split('/').slice(0, -1)),
+    { recursive: true },
+  );
+  writeFileSync(join(root, 'public', page.markdownPath), page.markdown);
+}
+
 const lines = [
   '# recv.fund documentation',
   '',
   '> Documentation for recv.fund, self-hosted, non-custodial stablecoin payment software for Solana and Robinhood Chain. Merchants run the server; funds settle to a wallet they register on-chain.',
   '',
+  'Use the merchant installation origin for API requests. Inspect its /api/v1/integration/capabilities and /api-json. Project keys use API-Key; never use a dashboard JWT or installation admin key in its place. Never send credentials to docs.recv.fund.',
+  '',
 ];
+lines.push(
+  '## Start here',
+  '',
+  '- [AI agent workflow](https://docs.recv.fund/agents/index.md): Setup, payments, verification and permissions.',
+  '- [Complete documentation](https://docs.recv.fund/llms-full.txt): All pages in one text file.',
+  '',
+);
 for (const [section, title] of Object.entries(sectionTitles)) {
   const inSection = pages.filter((page) => page.section === section);
   if (inSection.length === 0) continue;
   lines.push(`## ${title}`, '');
   for (const page of inSection) {
     const suffix = page.description ? `: ${page.description}` : '';
-    lines.push(`- [${page.title}](${siteUrl}${page.route})${suffix}`);
+    lines.push(`- [${page.title}](${siteUrl}/${page.markdownPath})${suffix}`);
   }
   lines.push('');
 }
 
 writeFileSync(join(root, 'public', 'llms.txt'), `${lines.join('\n')}\n`);
 console.log(`Wrote public/llms.txt with ${pages.length} pages.`);
+
+writeFileSync(
+  join(root, 'public', 'llms-full.txt'),
+  '# recv.fund complete documentation\n\n' +
+    pages
+      .map(
+        (page) =>
+          `---\nSource: ${siteUrl}${page.route}\nMarkdown: ${siteUrl}/${page.markdownPath}\n\n${page.markdown}`,
+      )
+      .join('\n\n'),
+);

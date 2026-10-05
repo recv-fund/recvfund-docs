@@ -1,0 +1,36 @@
+# Analytics
+
+**Overview** is the first page of the dashboard. It reports what has been received, from stored ledger values. It makes no RPC or price requests, so it does not show current balances.
+
+## What is counted
+
+- Every confirmed transfer to a deposit address, whether paid from a connected wallet on the checkout page or sent from elsewhere, including deposits that were not matched to a payment. Transfers still waiting for confirmations, and orphaned transfers, are excluded.
+- The gross incoming amount at the USD price stored when the transfer was first detected. Stablecoins are 1.00. The figures are receipts, not settlement proceeds, sweep results, payout totals or current market value.
+- Receipts stay visible after a project, chain or currency is deactivated.
+
+A payer is a customer, identified through the payment or the deposit address. A customer counts once per period and once in each chart bucket where it paid. A first-time payer's first confirmed receipt falls inside the bucket and inside the selected period; every other active payer in the bucket is returning. Customer identity is per project: the same external customer ID in two projects is two payers. Receipts whose customer was deleted still add USD but do not count as a payer.
+
+## Scope and filters
+
+The page follows the project selector: one project, or every project you can see. Every role can read the projects it is assigned to.
+
+**Date range** presets: Today, Yesterday, Last 7 days, Last 30 days, This month, Last month, Last 3 months, Last 6 months, All time, and Custom dates with **From date** and **Through date** (inclusive). All dates are UTC regardless of the server or browser time zone. Today, the rolling presets and month-to-date include the current UTC day. All time starts at the first confirmed receipt. Reversed or future ranges are rejected.
+
+**Group by** switches the second chart and the distribution between **Network** and **Currency**. Currency groups distinguish the same ticker on different chains.
+
+**Refresh** reloads the current filters. Changing the project resets the view.
+
+## What the page shows
+
+| Section | Content |
+| --- | --- |
+| KPI cards | All-time receipts in USD; receipts in the range with the change against the previous period; paying customers all time and in the range; customers with at least one payment request all time, and new paying customers in the range. |
+| Receipts by project | One series per selected project, including projects with no activity, with an exact table by date. |
+| Receipts by network or currency | One series per group, with an exact table. |
+| Receipt distribution | USD, token units and share per group. Token units are shown only when the group is one currency; a mixed network group shows none. Shares are rounded to two decimals. |
+| Paying customer activity | First-time and returning payers per bucket, with totals. |
+| Recent confirmed transfers | The latest ten confirmed receipts in the range, with confirmation time, transaction and source. |
+
+The comparison period immediately precedes the selected range and has the same number of UTC days. Percentage change is (current minus previous) divided by previous, as a two-decimal string; a zero baseline with activity shows no percentage. Ranges up to 366 days use daily buckets, longer ranges monthly buckets, and ranges over 100 years yearly buckets. Empty dates are zero-filled. Amounts are exact decimal strings from the database to the browser; they are never converted to floating point.
+
+For the full payment ledger use [payment history and CSV export](https://docs.recv.fund/features/payment-links.md#history-and-details).

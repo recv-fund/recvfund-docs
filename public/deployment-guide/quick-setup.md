@@ -1,0 +1,171 @@
+# Quick setup
+
+The installer is a Bash script published as an asset of each [release of recvfund-scripts](https://github.com/recv-fund/recvfund-scripts/releases); the URL below always serves the newest one. It writes a compose project under `/opt/recvfund`, pulls the newest released version of the public images `ghcr.io/recv-fund/recvfund-api` and `ghcr.io/recv-fund/recvfund-web`, and starts them. Run it on a fresh server over SSH. It needs Bash 4 or newer, `curl` and `openssl`; it installs Docker itself when Docker is missing.
+
+## 1. Run the script
+
+```bash
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash
+```
+
+The script runs as root through `sudo` so it can install Docker and write `/opt/recvfund`. Pass flags after `-s --`, for example `| sudo bash -s -- --testnet`. Pass `--mainnet` or `--testnet` to skip the menu and the network prompt; see [Script usage](https://docs.recv.fund/deployment-guide/script-usage.md) for every flag.
+
+## 2. Operations menu
+
+With no flags the script shows a menu. Enter `1` for a fresh install.
+
+```
+Operations
+  1) fresh install
+  2) update to the newest release
+  3) restart services
+  4) reset (remove containers, images and data)
+  5) show status
+  6) exit
+Choice [1]:
+```
+
+If `/opt/recvfund/.env` already exists, the script asks whether to update the existing installation, remove it and install again, or cancel.
+
+## 3. System checks and Docker
+
+The script detects the operating system and CPU architecture (amd64 and arm64), checks that `curl` and `openssl` exist, and installs Docker and the compose plugin if they are missing:
+
+```
+Docker is not installed. Install it now? [Y/n]:
+```
+
+It then creates the install directory, starts writing `/opt/recvfund/install.log`, and checks free disk space. Below 5 GB it asks before continuing; below 10 GB it warns.
+
+## 4. Network
+
+```
+Network
+  1) mainnet  - real funds
+  2) testnet  - Solana devnet and test funds; recommended for a first install
+Choice [2]:
+```
+
+Testnet is the default and the right choice for a first install. The network type is written to `.env` as `NETWORK_TYPE` and cannot be changed later without `--reset`.
+
+## 5. Database
+
+```
+Database
+  1) external Postgres - recommended for production
+  2) bundled Postgres container - for testing only; data lives in a Docker volume
+Choice [2]:
+```
+
+With `1`, the script asks for the connection and tests it before going on:
+
+```
+Postgres host:
+Postgres port [5432]:
+Database name [recv]:
+Database user [recv]:
+Database password:
+Connect with SSL? [y/N]:
+```
+
+The host must be reachable from inside the `api` container, so `localhost` means the container itself; use the machine's LAN address or, on Docker Desktop, `host.docker.internal`. The bundled database is fine for testnet and for small installs. For mainnet, a managed Postgres with its own backups is the safer choice.
+
+## 6. HTTPS
+
+```
+HTTPS
+  1) Let's Encrypt - a domain name pointing at this server; ports 80 and 443 must be free
+  2) plain HTTP    - by IP address, or behind your own reverse proxy
+Choice [2]:
+```
+
+With `1`, the script asks:
+
+```
+Domain name:
+Email for the Let's Encrypt account [admin@<domain>]:
+```
+
+It checks that the domain resolves to this server and that ports 80 and 443 are free. Caddy obtains a certificate from Let's Encrypt on the first request and renews it.
+
+With `2`, the script asks:
+
+```
+Host port for HTTP [80]:
+Public site URL (as reached by browsers; editable later in Settings) [http://<server-ip>]:
+```
+
+It checks that the port is free. The site URL is used in payment links and emails; change it later under Settings → Site URL if it is wrong. Let's Encrypt is not offered on macOS, which is supported for local testing only.
+
+### Installing behind a router or in a virtual machine
+
+The suggested site URL uses the public address that `api.ipify.org` reports for this machine. On a cloud server, that's the server's own address. Behind a home or office router, or inside a virtual machine such as Lima, it's the router's address. Browsers can't reach the server there, so the printed signup link doesn't open.
+
+In that case, at the site URL prompt, enter an address your browser can reach:
+
+- **Lima on a Mac:** `http://localhost`. Lima forwards the VM's ports to your Mac.
+- **Another virtual machine or a machine on your network:** `http://<its LAN address>`, for example `http://192.168.64.5`.
+
+If you used `--yes` or accepted the default, open that address in your browser and finish signup. Then set the same address under **Installation** → **Site URL**. Payment links and emails use the site URL, so they point to the wrong place until you change it. Customers outside your network can't reach a local address. For real payments, install on a server with a public address or a domain.
+
+## 7. Summary and confirmation
+
+The script generates `AES_ENCRYPTION_KEY`, `ADMIN_API_KEY`, `POSTGRES_PASSWORD` (bundled database only) and `REDIS_PASSWORD`, then prints the configuration:
+
+```
+Configuration
+  Directory:     /opt/recvfund
+  OS:            Ubuntu 24.04 LTS (amd64)
+  Network:       testnet
+  Database:      bundled container (profile db)
+  HTTPS:         Let's Encrypt for pay.example.com (ops@example.com)
+  Site URL:      https://pay.example.com
+  Images:        ghcr.io/recv-fund/recvfund-api and recvfund-web, version 0.1.2
+  Secrets:       generated (written only to /opt/recvfund/.env)
+
+Write the files and start the services? [Y/n]:
+```
+
+Press Enter to continue. `--yes` skips this and every earlier prompt, taking the defaults: testnet, bundled Postgres, plain HTTP on port 80.
+
+## 8. What the script does next
+
+1. Writes `/opt/recvfund/.env` (mode 600), `docker-compose.yml` and `Caddyfile`.
+2. `docker compose pull` (or builds the images with `--source`).
+3. Starts `postgres` (bundled installs) and `redis` and waits for them to be healthy.
+4. `docker compose run --rm api node dist/src/db/migrate` (schema and seed data).
+5. `docker compose up -d`
+6. Polls `/api/v1/health` for up to 90 seconds.
+7. Prints the signup URL.
+
+```
+recv.fund installed
+
+  Create the root account:  https://pay.example.com/signup
+  Configuration:            /opt/recvfund/.env
+  Logs:                     cd /opt/recvfund && docker compose -p recvfund logs -f --tail=100 api
+  Certificate:              Caddy requests it from Let's Encrypt on the first request; allow a minute.
+
+Back up /opt/recvfund/.env now. AES_ENCRYPTION_KEY in that file decrypts every
+secret in the database, including hot wallet keys. If it is lost they
+cannot be recovered.
+```
+
+If the API never reports healthy, the script exits with a nonzero status and points at the log. Run the logs command above to see why.
+
+## 9. Create the root account
+
+Open the signup URL in a browser and continue with [Root account setup](https://docs.recv.fund/onboarding-guide/root-account-setup.md). The signup page works only until the first account exists; after that the API rejects further root signups.
+
+If the signup link doesn't open, see [Installing behind a router or in a virtual machine](#installing-behind-a-router-or-in-a-virtual-machine).
+
+## Checking on the install
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund ps
+docker compose -p recvfund logs -f --tail=100 api
+curl -s http://127.0.0.1/api/v1/health
+```
+
+Or run the script with `--status`.

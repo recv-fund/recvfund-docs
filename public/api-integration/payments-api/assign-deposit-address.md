@@ -1,0 +1,74 @@
+# Assign deposit address
+
+```
+POST /api/v1/deposit-address/reference/{reference_id}
+```
+
+Derives the customer's permanent deposit address on the given chain, stores it, and selects that chain for this payment. Use it when you show a deposit address yourself instead of sending the customer to the checkout page. The address is the same for every future payment by this customer on this chain.
+
+Headers: `API-Key`, `Content-Type: application/json`.
+
+## Request
+
+```bash
+curl -X POST https://<your-site>/api/v1/deposit-address/reference/c80f5363-0397-4761-aa1a-3155c3a21470 \
+  -H "API-Key: 811b12035f0dfa8ffd62296df3c98b27" \
+  -H "Content-Type: application/json" \
+  -d '{"blockchain_code": "SOLANA"}'
+```
+
+| Field | In | Type | Required | Constraints |
+| --- | --- | --- | --- | --- |
+| `reference_id` | path | string | yes | Version 4 UUID from create payment. |
+| `blockchain_code` | body | string | yes | `SOLANA` or `ROBINHOOD`. Must be a chain present in [Deposit options](https://docs.recv.fund/api-integration/payments-api/deposit-options.md) for this payment. |
+
+## Response
+
+`200 OK`
+
+```json
+{
+  "id": 324,
+  "createdAt": "2026-09-22T06:53:42.419Z",
+  "Address": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+  "Family": "solana",
+  "Status": "active",
+  "MemberID": 271,
+  "BlockchainFamilyID": 1
+}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | integer | Deposit address record id. |
+| `createdAt` | string | ISO 8601 time the address was first assigned. Earlier than the request when the address already existed. |
+| `Address` | string | The canonical deposit account: the program-derived address (PDA) on Solana, the CREATE2 address computed by your merchant contract on Robinhood Chain. For native SOL and ETH this is where the customer sends funds. |
+| `Family` | string | `solana` or `evm`. |
+| `Status` | string | `active` or `dormant`. |
+| `MemberID` | integer | Internal customer id (not your `customerID`). |
+| `BlockchainFamilyID` | integer | Chain id in this install's catalog. |
+
+The PascalCase keys are PayRam's and are kept for compatibility.
+
+## Which address to show the customer
+
+`Address` is the deposit account. For an SPL token on Solana (USDC, USDT) the customer must send to the token account, which is a different address: read `customerAddress` for that currency from [Deposit options](https://docs.recv.fund/api-integration/payments-api/deposit-options.md) after assignment. For USDG on Robinhood Chain and for native SOL and ETH, `customerAddress` equals `Address`.
+
+Assignment selects only the chain. It does not select a currency and does not create a price quote. The first confirmed transfer sets the payment's currency. A quote (the exact token amount for the USD value) is only produced by the checkout `select` endpoint; for stablecoins the token amount equals the USD amount.
+
+## Errors
+
+| Status | `code` | Cause |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST` | `reference_id` is not a version 4 UUID; `blockchain_code` is missing or not `SOLANA`/`ROBINHOOD`; the chain is not available for this payment (not enabled, no active merchant registration, or excluded by the payment's restriction). |
+| 401 | `UNAUTHORIZED` | Invalid API key. |
+| 404 | `NOT_FOUND` | No payment with this reference id in the key's project. |
+| 409 | `CONFLICT` | The payment is filled, over-filled, cancelled or expired, or its customer or project is inactive; the chain differs from the currently selected one and a transfer has already been detected; the payment or chain availability changed during the request (retry). |
+| 429 | `RATE_LIMITED` | Per-key limit exhausted. |
+| 503 | `UNAVAILABLE` | Address derivation could not be completed, the rate-limit setting is invalid, or Redis is unreachable. Nothing is stored on failure. |
+
+## Notes
+
+- Repeating the call with the same chain is safe and returns the same address. Repeating it with a different chain clears any checkout quote and selected currency on the payment; after a transfer has been detected the chain can no longer change.
+- The address is derived from your on-chain merchant registration and the customer's stored reference; the merchant registration on that chain must be active. No private key for the address exists anywhere.
+- No transaction is sent, and no funds move, by this call. Funds arriving at the address are detected by the deposit watcher and credited when confirmed; they are moved to your settlement wallet by a [sweep](https://docs.recv.fund/features/sweeps.md).

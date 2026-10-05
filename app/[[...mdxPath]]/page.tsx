@@ -1,5 +1,7 @@
 import { generateStaticParamsFor, importPage } from 'nextra/pages';
 import { useMDXComponents as getMDXComponents } from '@/mdx-components';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 type PageProps = {
   params: Promise<{ mdxPath?: string[] }>;
@@ -10,7 +12,18 @@ export const generateStaticParams = generateStaticParamsFor('mdxPath');
 export async function generateMetadata(props: PageProps) {
   const params = await props.params;
   const { metadata } = await importPage(params.mdxPath);
-  return metadata;
+  const path = params.mdxPath?.join('/') || 'index';
+  const markdownPath = existsSync(resolve('content', `${path}.mdx`))
+    ? path
+    : `${path}/index`;
+  return {
+    ...metadata,
+    alternates: {
+      types: {
+        'text/markdown': `https://docs.recv.fund/${markdownPath}.md`,
+      },
+    },
+  };
 }
 
 const Wrapper = getMDXComponents().wrapper;

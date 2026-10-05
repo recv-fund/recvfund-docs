@@ -1,0 +1,305 @@
+# Advanced setup
+
+This page documents what the installer produces so you can reproduce or repair it by hand. The stack runs two application images, `recvfund-api` and `recvfund-web`, which are public on GitHub Container Registry (`ghcr.io/recv-fund/recvfund-api` and `ghcr.io/recv-fund/recvfund-web`, tags `X.Y.Z` per release, `latest` for the newest release), or built on the server only with the `--source` option.
+
+```
+Internet ──► caddy :80/:443 ──┬── /api/*  → api:3001   (the server: API, watchers, sweeps, payouts, webhooks)
+                              └── /*      → web:3000   (dashboard and /payments checkout)
+                       redis     internal only
+                       postgres  internal only, profile "db" (or an external Postgres)
+```
+
+## Files on the server
+
+```
+/opt/recvfund/
+├── .env                       # secrets and connection values, mode 600
+├── docker-compose.yml         # the stack below
+├── Caddyfile                  # routing and TLS
+├── install.log                # appended by every installer run
+└── docker-compose.build.yml   # only with --source: build overrides for api and web
+```
+
+## docker-compose.yml
+
+```yaml
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+      - api
+
+  api:
+    image: ghcr.io/recv-fund/recvfund-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      NETWORK_TYPE: ${NETWORK_TYPE}
+      SITE_URL: ${SITE_URL}
+      AES_ENCRYPTION_KEY: ${AES_ENCRYPTION_KEY}
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      SEND_WEBHOOKS: ${SEND_WEBHOOKS:-true}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_SSL: ${POSTGRES_SSL:-false}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - api-logs:/repo/apps/api/logs
+      - api-uploads:/repo/apps/api/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3001/api/v1/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    image: ghcr.io/recv-fund/recvfund-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Same origin as the browser: Caddy routes /api/* to the api service.
+      NEXT_PUBLIC_API_URL: /api/v1
+      API_INTERNAL_URL: http://api:3001/api/v1
+    depends_on:
+      - api
+
+  postgres:
+    image: postgres:16-alpine
+    profiles: ['db']
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  caddy-data:
+  caddy-config:
+  postgres-data:
+  redis-data:
+  api-logs:
+  api-uploads:
+```
+
+The installer accepts amd64 and arm64 hosts. The `postgres` service is behind the `db` profile: it starts only when you pass `--profile db`, which the installer does for a bundled database.
+
+## Caddyfile
+
+```
+{
+	email {$ACME_EMAIL}
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:3001
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
+```
+
+When `SITE_DOMAIN` is a hostname, Caddy obtains and renews a Let's Encrypt certificate. When it is `:80`, the stack serves plain HTTP.
+
+## Environment variables
+
+Everything in `.env`. The installer writes all of them; edit by hand only if you know what each value does.
+
+| Variable | Meaning |
+| --- | --- |
+| `SITE_DOMAIN` | The hostname Caddy serves, with automatic HTTPS. `:80` for plain HTTP (IP address, or behind your own proxy). |
+| `ACME_EMAIL` | Email address given to Let's Encrypt for certificate notices. Empty when `SITE_DOMAIN` is `:80`. |
+| `SITE_URL` | The public address of this install: used in payment links, emails and the dashboard. Initial value only; editable later under Settings → Site URL, which is stored in the database. |
+| `NETWORK_TYPE` | `mainnet` or `testnet`. Decides which chain rows the API serves. Never change it on a running install. |
+| `AES_ENCRYPTION_KEY` | 64 hex characters. Encrypts every secret in the database, including hot wallet private keys and webhook secrets. Generate with `openssl rand -hex 32`. Never change it after first start. Back it up off the server. |
+| `ADMIN_API_KEY` | Hex string. Authenticates the two platform-configuration administration endpoints of the API (`x-api-key` header). The installer generates it but does not use it. Not a project API key. |
+| `POSTGRES_HOST` | `postgres` for the bundled container; a hostname for an external server. |
+| `POSTGRES_PORT` | Default `5432`. |
+| `POSTGRES_USER` | Default `recv`. |
+| `POSTGRES_PASSWORD` | Generated by the installer for the bundled database. |
+| `POSTGRES_DB` | Default `recv`. |
+| `POSTGRES_SSL` | `true` or `false`. Use `true` for most managed Postgres services. |
+| `REDIS_PASSWORD` | Generated by the installer. Redis is only reachable inside the compose network. It holds caches and rate-limit counters; queues and job state are in Postgres. |
+| `SEND_WEBHOOKS` | `true` by default. `false` stops every webhook delivery server-wide. Useful on a staging copy of a production database. |
+| `IMAGE_TAG` | Image version to run. The installer writes the newest released version (for example `0.1.2`); `--image-tag` overrides it. `--update` changes it. |
+
+Every other setting (sweep triggers, payment expiry, rate limits, SMTP, site URL) lives in the database and is edited in the dashboard, not in `.env`.
+
+A complete example for a bundled database and plain HTTP:
+
+```
+SITE_DOMAIN=:80
+ACME_EMAIL=
+SITE_URL=http://203.0.113.10
+NETWORK_TYPE=testnet
+AES_ENCRYPTION_KEY=<64 hex characters>
+ADMIN_API_KEY=<hex>
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_USER=recv
+POSTGRES_PASSWORD=<generated>
+POSTGRES_DB=recv
+POSTGRES_SSL=false
+REDIS_PASSWORD=<generated>
+SEND_WEBHOOKS=true
+IMAGE_TAG=0.1.2
+```
+
+## Volumes
+
+| Volume | Contents |
+| --- | --- |
+| `postgres-data` | The bundled database. Not used with an external Postgres. |
+| `redis-data` | Redis append-only file. Safe to lose; caches and rate-limit counters rebuild. |
+| `caddy-data` | Certificates and ACME account. Losing it means a new certificate request on next start. |
+| `caddy-config` | Caddy's runtime config. |
+| `api-logs` | API log files. |
+| `api-uploads` | Uploaded project logos. Back it up with the database. Replacing the API container keeps it. |
+
+## Starting by hand
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund --env-file .env --profile db pull
+docker compose -p recvfund --env-file .env --profile db up -d --wait postgres redis
+docker compose -p recvfund --env-file .env --profile db run --rm api node dist/src/db/migrate
+docker compose -p recvfund --env-file .env --profile db up -d --remove-orphans
+curl -s http://127.0.0.1/api/v1/health
+```
+
+Leave out `--profile db`, and start only `redis` in the second command, when `POSTGRES_HOST` points at an external server. With `--source`, add `-f docker-compose.yml -f docker-compose.build.yml` and replace `pull` with `build --pull`.
+
+The API refuses to start with unapplied migrations, which is why `migrate` runs first.
+
+## External Postgres
+
+Point `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` and `POSTGRES_SSL` at a Postgres 16 server, and start the stack without `--profile db`. The user needs to own the database: migrations create the `recv` and `recv_ops` schemas and their tables. Allow the server's IP in the database firewall.
+
+The installer sets this up when you choose `external` at the database prompt, or pass `--external-db` with the `--pg-*` options. It tests the connection before writing any file.
+
+## Behind your own proxy
+
+If another proxy or load balancer already owns ports 80 and 443, run the stack on plain HTTP on a different host port and forward to it.
+
+1. Set `SITE_DOMAIN=:80` and `ACME_EMAIL=` in `.env`.
+2. Change the `caddy` port mapping to your chosen port, for example `'8080:80'`, and remove the `443` mappings.
+3. Set `SITE_URL` to the public HTTPS address your proxy serves.
+4. Forward that address to `http://127.0.0.1:8080` on the server, passing the `Host` header through.
+
+The installer does steps 1 to 3 for you with `--http-port 8080 --site-url https://pay.example.com`. Add `--http-bind 127.0.0.1` when the proxy runs on the same server, so port 8080 isn't reachable from outside. Without `--site-url`, it asks for the site URL (with `--yes`, it uses `http://<server-ip>:8080`). The dashboard shows the site URL under Settings → Site URL; correct it there so payment links and emails carry the address your proxy serves.
+
+## Updating by hand
+
+`--update` does the following; run it yourself if you prefer.
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund --env-file .env --profile db pull
+docker compose -p recvfund --env-file .env --profile db up -d --wait postgres redis
+docker compose -p recvfund --env-file .env --profile db run --rm api node dist/src/db/migrate
+docker compose -p recvfund --env-file .env --profile db up -d --remove-orphans
+```
+
+To pin a version, set `IMAGE_TAG` in `.env` before pulling. Keep `.env` otherwise identical across updates: a changed `AES_ENCRYPTION_KEY` or `NETWORK_TYPE` makes existing data unreadable or mismatched.
+
+## Backups
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund exec postgres pg_dump -U recv recv > backup.sql
+docker run --rm -v recvfund_api-uploads:/uploads -v "$PWD":/backup alpine tar czf /backup/uploads.tgz -C /uploads .
+cp .env env.backup
+```
+
+Restore is the reverse: restore the dump into an empty database, restore the uploads archive into the `api-uploads` volume, put `.env` back, start the stack. With an external Postgres, use that service's own backups and still keep a copy of `.env`.
+
+## Stopping and starting
+
+The installer has no stop operation. Stop and start the containers with Docker Compose from the install directory. Run the commands with `sudo` if your user isn't in the `docker` group. Leave out `--profile db` when you use an external Postgres.
+
+To stop every container and keep all data:
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund --profile db stop
+```
+
+To start the stopped containers again:
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund --profile db start
+```
+
+`down` removes the containers but keeps the volumes, `.env` and the database. Bring the stack back with `up -d`:
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund --profile db down
+docker compose -p recvfund --profile db up -d
+```
+
+Without `--profile db`, these commands skip the bundled Postgres container, so `stop` leaves it running. Every container has `restart: unless-stopped`. A container you stopped stays stopped after a reboot, and one you didn't stop starts again with Docker.
+
+{/* prettier-ignore */}
+> [!CAUTION]
+>
+> Don't add `-v` to `down`. It deletes the volumes, including the bundled
+> database. `--reset` also deletes everything; see
+> [Script usage](https://docs.recv.fund/deployment-guide/script-usage.md).
+
+## Day-two commands
+
+```bash
+cd /opt/recvfund
+docker compose -p recvfund ps
+docker compose -p recvfund logs -f --tail=100 api
+docker compose -p recvfund restart api
+curl -s http://127.0.0.1/api/v1/health
+```

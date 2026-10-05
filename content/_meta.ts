@@ -11,6 +11,7 @@ const meta: MetaRecord = {
   '--product': { type: 'separator', title: 'Product' },
   features: 'Features',
   'api-integration': 'API integration',
+  agents: 'AI agent guide',
   '--support': { type: 'separator', title: 'Support' },
   support: 'Support',
 };

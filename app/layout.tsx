@@ -41,7 +41,9 @@ export default async function RootLayout({
   const pageMap = await getPageMap();
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
-      <Head />
+      <Head>
+        <link rel="describedby" href="/llms.txt" type="text/markdown" />
+      </Head>
       <body>
         <Layout
           navbar={navbar}

@@ -1,0 +1,35 @@
+# What's new
+
+The full history is on the [Change log](https://docs.recv.fund/support/change-log.md) page.
+
+## 0.1.7: Setup page
+
+**Setup** in the sidebar shows what is configured, what is working, and what is left. Integration status checks the server, RPC nodes, contract, hot wallet balances, registrations, and recent failed sweeps, payouts and webhook deliveries. Until setup is complete, a banner on every other page links to it.
+
+## 0.1.6: paste keys from Phantom and MetaMask
+
+The hot wallet import accepts the private key exactly as Phantom, Solflare or MetaMask exports it.
+
+## 0.1.5: no contract address to enter
+
+Your installation now connects to the recv.fund program and factory contract by itself and checks their code. The **recv.fund contract** step of the setup guide shows it as verified; there is nothing to paste. Update with `--update`.
+
+## 0.1.2 to 0.1.4: setup guide
+
+The Overview page walks you through payment setup one step at a time, for each project and network. Every change is now published as a new version, and `--update` installs the newest.
+
+## 2026-09: Initial release
+
+The first public release of recv.fund. The test network deployments were replaced on 2026-10-03; the addresses are under [Networks and tokens](https://docs.recv.fund/support/networks.md#program-addresses). Mainnet is not deployed yet.
+
+- Solana: USDC, USDT and SOL. Robinhood Chain: USDG and ETH.
+- One-line installer for mainnet and testnet, with update, restart, status and reset commands.
+- Root account wizard, projects, team roles, API keys and webhook endpoints.
+- On-chain merchant registration in one transaction from a browser wallet. On Robinhood Chain it creates your own merchant contract. Deposit addresses derived from your registration; no deposit keys on the server.
+- Hosted checkout page with per-customer deposit addresses, QR codes and confirmation progress. Wallet payment for every currency, SOL included, as one transfer to the customer's deposit address.
+- One fee, at most 2%, taken only when deposits are swept, at a rate fixed for your registration when it is confirmed.
+- Sweeps with an activation threshold and amount, count and time triggers, plus manual sweeps.
+- Payouts with an address book, USD limits, approval by email one-time code, and payout webhooks.
+- Payments and payouts API with PayRam-compatible paths, so an existing integration ports with a host change.
+- Signed webhooks with a retry schedule.
+- RPC node pools per chain with a preferred node and automatic failover.

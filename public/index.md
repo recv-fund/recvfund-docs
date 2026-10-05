@@ -1,0 +1,43 @@
+# Welcome to recv.fund
+
+recv.fund is self-hosted, non-custodial stablecoin payment software. You install it on a Linux server you control. It gives you a dashboard, a hosted checkout page, a JSON API and webhooks. When a customer pays, the funds go to that customer's deposit address, which belongs to your on-chain merchant registration, and your server later sweeps them to the settlement wallet you registered. Nothing we run is in the path of a payment.
+
+recv.fund is software, not a payment service. We never hold, process or transfer funds for anyone. Your own wallet receives them. You remain responsible for your own legal obligations in your jurisdiction.
+
+## What runs on your server
+
+One `docker compose` project, written to `/opt/recvfund` by the installer:
+
+| Service | Role |
+| --- | --- |
+| `caddy` | Terminates TLS and serves everything on ports 80 and 443. Routes `/api/*` to the API and everything else to the web app. |
+| `api` | The server. Runs the public API, the dashboard API, the chain watchers, the sweep scheduler, payouts and webhook delivery. |
+| `web` | The dashboard and the hosted checkout page at `/payments`. |
+| `postgres` | The database. Optional: the installer can point the stack at an external Postgres instead. |
+| `redis` | Caches and rate-limit counters. Queues and job state are in Postgres. |
+
+Dashboard, checkout page and API share one origin, so there is no separate API port.
+
+## What never leaves your control
+
+- **Your settlement wallet.** Funds arrive at the address you registered on-chain. Only a transaction signed by your admin wallet can change it.
+- **Deposit addresses.** Each customer gets a permanent deposit address per chain. The address is derived from your merchant registration: an account of the recv.fund program on Solana, your own merchant contract on Robinhood Chain. No private key for it exists anywhere, on your server or ours.
+- **The one key on the server.** Your hot wallet. It pays transaction fees for sweeps and sends the payouts you approve. Its private key is entered once in the dashboard and stored encrypted with a key that only your server holds.
+- **The program and your merchant contract.** Funds at a deposit address can move only to your registered settlement wallet and to the fee collector recorded in your registration. Deactivating your registration stops your checkout page from offering that chain but never blocks sweeps, so funds at a deposit address can always be moved to your settlement wallet.
+
+The service fee is a percentage of each sweep, taken on chain, at most 2%. No fee is taken when a customer pays. The rate is shown in your dashboard before you register and is fixed for your registration once the registration transaction is confirmed; recv.fund can change it only for later registrations.
+
+## Chains and tokens at launch
+
+| Chain | Code | Tokens |
+| --- | --- | --- |
+| Solana | `SOLANA` | USDC, USDT, SOL |
+| Robinhood Chain | `ROBINHOOD` | USDG, ETH |
+
+Every install runs against either mainnet or the test networks (Solana devnet and Robinhood Chain testnet). You pick at install time. On the test networks the tokens are USDC and SOL on Solana devnet, and USDG and ETH on Robinhood Chain testnet.
+
+## Where to start
+
+1. [Deployment guide](https://docs.recv.fund/deployment-guide/introduction.md): install with one command.
+2. [Onboarding guide](https://docs.recv.fund/onboarding-guide/introduction.md): create the root account, register on-chain, set up a hot wallet, take a test payment.
+3. [API integration](https://docs.recv.fund/api-integration/introduction.md): create payments and receive webhooks from your own systems.

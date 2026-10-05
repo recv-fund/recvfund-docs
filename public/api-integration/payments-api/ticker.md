@@ -1,0 +1,53 @@
+# Ticker
+
+Lists every active currency on active chains for the installation's network type, with the current USD price of one unit. Use it to show the amount a customer will send, as the demo store does for deposit-address payments.
+
+```bash
+curl https://<your-site>/api/v1/ticker
+```
+
+No API key is needed. The endpoint is rate limited per IP address with the checkout limit (`rateLimit.checkout.perMinute`).
+
+## Response
+
+`200` with an array:
+
+```json
+[
+  {
+    "blockchainCode": "SOLANA",
+    "currencyCode": "USDC",
+    "tokenAddress": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+    "standard": "spl",
+    "walletPrecision": 6,
+    "family": "solana",
+    "price": "1.0"
+  },
+  {
+    "blockchainCode": "ROBINHOOD",
+    "currencyCode": "ETH",
+    "tokenAddress": "0x0000000000000000000000000000000000000000",
+    "standard": "native",
+    "walletPrecision": 18,
+    "family": "evm",
+    "price": "3421.17"
+  }
+]
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `blockchainCode` | string | `SOLANA` or `ROBINHOOD`. |
+| `currencyCode` | string | For example `USDC`, `USDG`, `SOL`, `ETH`. |
+| `tokenAddress` | string | Mint or contract address; `native` for SOL and the zero address for ETH. |
+| `standard` | string | `native`, `spl` or `erc20`. |
+| `walletPrecision` | number | Decimal places of one unit. |
+| `family` | string | `solana` or `evm`. |
+| `price` | string | USD price of one unit. Stablecoins are `"1.0"`; they are catalog pegs, not live market prices. |
+
+## Errors
+
+| Status | `code` | When |
+| --- | --- | --- |
+| 503 | `UNAVAILABLE` | A current price for any listed currency is unavailable. The whole request fails; prices are never omitted or replaced with stale values. |
+| 429 | `RATE_LIMITED` | The per-IP limit for the current minute is exhausted. |

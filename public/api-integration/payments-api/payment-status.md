@@ -1,0 +1,82 @@
+# Payment status
+
+```
+GET /api/v1/payment/reference/{reference_id}
+```
+
+Reads one payment. This is the call to make before fulfilling an order: a webhook tells you something changed, this endpoint tells you the current state from your own server. The read is served from the database; it makes no RPC call and never changes the payment.
+
+Headers: `API-Key`.
+
+## Request
+
+```bash
+curl https://<your-site>/api/v1/payment/reference/c80f5363-0397-4761-aa1a-3155c3a21470 \
+  -H "API-Key: 811b12035f0dfa8ffd62296df3c98b27"
+```
+
+| Parameter | In | Constraints |
+| --- | --- | --- |
+| `reference_id` | path | Version 4 UUID from create payment. |
+
+## Response
+
+`200 OK`
+
+```json
+{
+  "referenceID": "c80f5363-0397-4761-aa1a-3155c3a21470",
+  "invoiceID": "INV-0090",
+  "customerID": "1234",
+  "customerEmail": "a@example.com",
+  "amountInUSD": "50.000000",
+  "paymentState": "FILLED",
+  "currency": "USDC",
+  "network": "SOLANA",
+  "filledAmount": "50",
+  "filledAmountInUSD": "50.000000",
+  "depositAddress": "4Nd1mYw9zqXxq2Vb7Lr8KfJ3sT6uHc1pQe9RaBwDgF2h",
+  "confirmationCurrent": 1,
+  "confirmationRequired": 1,
+  "expiresAt": "2026-09-23T06:53:42.419Z",
+  "createdAt": "2026-09-22T06:53:42.419Z",
+  "merchantName": "Project One",
+  "testMode": false
+}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `referenceID` | string | The payment's reference id. |
+| `invoiceID` | string | Your `invoiceID` from creation, or `""`. |
+| `customerID` | string | Your `customerID` from creation. |
+| `customerEmail` | string | The customer's current email address. |
+| `amountInUSD` | string | Requested amount, six decimals. |
+| `paymentState` | string | `OPEN`, `PARTIALLY_FILLED`, `FILLED`, `OVER_FILLED` or `CANCELLED`. See [Payment states](https://docs.recv.fund/api-integration/payments-api/index.md). |
+| `currency` | string | The selected currency code, or the restricting currency from creation, or `""` when neither is set. |
+| `network` | string | The selected chain code, or the restricting chain from creation, or `""`. |
+| `filledAmount` | string | Confirmed amount in units of the selected currency (`"0"` until a currency is selected). Not padded to the currency's decimals. |
+| `filledAmountInUSD` | string | Confirmed amount in USD, six decimals. Includes transfers in any currency credited to this payment. |
+| `depositAddress` | string | The receiving address for the selected currency (the token account for SPL tokens), the deposit account when a chain is selected but no currency yet, or `""`. |
+| `confirmationCurrent` | integer | The lowest confirmation count across the payment's non-orphaned transfers. `0` with no transfers. |
+| `confirmationRequired` | integer | The selected or restricting chain's confirmation threshold. `0` when no chain is set. |
+| `expiresAt` | string or null | ISO 8601 expiry. |
+| `createdAt` | string | ISO 8601 creation time. |
+| `merchantName` | string | The project name. |
+| `testMode` | boolean | `true` on a testnet install. |
+
+Amounts are strings. Do not parse `amountInUSD` or `filledAmountInUSD` into a binary floating-point number before comparing them.
+
+## Errors
+
+| Status | `code` | Cause |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST` | `reference_id` is not a version 4 UUID. |
+| 401 | `UNAUTHORIZED` | Invalid API key. |
+| 404 | `NOT_FOUND` | No payment with this reference id in the key's project. |
+| 429 | `RATE_LIMITED` | Per-key limit exhausted. |
+| 503 | `UNAVAILABLE` | Rate-limit setting invalid or Redis unreachable. |
+
+## Polling
+
+Webhooks are the intended way to learn about changes; poll this endpoint as a fallback or to confirm a webhook. The per-key limit is 300 requests per minute by default across every keyed endpoint, so polling many open payments every few seconds will exhaust it. The hosted checkout page polls its own public endpoint, which is limited per IP address and does not count against your key.

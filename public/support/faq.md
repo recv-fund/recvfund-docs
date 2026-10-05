@@ -1,0 +1,121 @@
+# FAQ
+
+## Is recv.fund custodial?
+
+No. recv.fund is software you run on your own server. Nothing we run is in the path of a payment. Every customer payment is a plain transfer from the customer's wallet to that customer's deposit address; no recv.fund contract or program instruction runs when a customer pays. The funds stay at the deposit address until your install sweeps them to the settlement wallet you registered.
+
+A sweep can move funds from a deposit address only to your registered settlement wallet and to the fee collector recorded in your registration. No instruction or function takes a caller-supplied destination. Only a transaction signed by your admin wallet can change your settlement wallet. There is no pause or freeze function. On Solana the vendor authority cannot sign a sweep; on Robinhood Chain your merchant contract has no owner and recv.fund has no role in it. If the fee collector cannot receive a fee, the fee goes to your settlement wallet, so no account recv.fund controls can block a sweep.
+
+recv.fund is non-custodial software; you remain responsible for your own legal obligations in your jurisdiction.
+
+## What fee is charged, and where is it enforced?
+
+One fee, a percentage of each sweep. Nothing is taken when a customer pays; the full amount arrives at the customer's deposit address. When your install sweeps a deposit address, the sweep sends the fee to the fee collector and the rest to your settlement wallet in the same transaction. The fee is `amount * rate / 10000`, rounded down, and the rate is at most 200 basis points (2%).
+
+The rate and the fee collector are recorded in your registration on chain when the registration transaction is confirmed: in the `Merchant` account on Solana, in your own merchant contract on Robinhood Chain. Sweeps read them from there. Before you sign, the dashboard shows the rate under Nodes ("Fee for new registrations (basis points, taken at sweep)") and in the registration panel ("Fee: N bps of each sweep").
+
+There is no subscription and no setup fee. You pay for your own server and the network fees of sweeps and payouts.
+
+## Can the fee change?
+
+Not for a registered merchant. Your rate and fee collector are copied into your registration when it is created, and no instruction or function exists that changes them afterwards, for you or for recv.fund. recv.fund can change the terms only for registrations made after the change (`set_fee_terms` on the Solana program, `setFeeTerms` on the Robinhood Chain factory), and only up to the 200 basis points (2%) maximum compiled into the code.
+
+These guarantees hold as long as the code itself cannot be replaced. The Robinhood Chain contracts have no proxy and cannot be upgraded; a change ships as a new factory, and merchant contracts created by the old one keep working unchanged. The Solana devnet program still has an upgrade authority and is provisional. The server refuses a Solana mainnet program that still has an upgrade authority, and the mainnet program is not deployed yet.
+
+## What happens if my server is offline?
+
+Payments still arrive. A customer who already has a deposit address can send to it whether or not your server is running, and the funds stay at that address. The checkout page itself is served by your server, so it is not available while the server is down.
+
+What stops is bookkeeping and sweeping. When the server is back:
+
+- The deposit watcher resumes from its per-address progress and credits every deposit it missed, including wallet payments whose hash the checkout page could not submit.
+- Detected transfers continue counting confirmations.
+- Queued webhooks and queued sweeps and payouts resume; a webhook whose delivery lease expired is retried.
+
+The deposit watcher keeps its position in the database and advances it only after a page has been fully processed, so a crash mid-page replays that page safely. The RPC nodes you use must retain enough history for the catch-up. Payments whose expiry passed while the server was down are cancelled by the expiry scheduler; see the expiry question below for how later transfers are matched.
+
+If a payment is still missing afterwards, report its transaction hash under Payments, Missed payments.
+
+## What if I lose the AES key?
+
+`AES_ENCRYPTION_KEY` in `/opt/recvfund/.env` encrypts every secret in the database: hot wallet private keys, webhook secrets, the SMTP password and the session signing secrets. Without it those secrets cannot be recovered and there is no key export.
+
+Deposit addresses and settlement are not affected, because no deposit key exists and the settlement wallet is yours. Funds at deposit addresses can still be swept: create a new hot wallet, assign it to the project, and update the sweeper on-chain with your admin wallet. Back up `.env` together with the database; see [What to back up](https://docs.recv.fund/deployment-guide/introduction.md).
+
+## Can I change the settlement wallet?
+
+Yes. Under Wallets, Deposit wallets, prepare a settlement update for the registration. The server returns an unsigned transaction; you sign it with the admin wallet that registered, and the server confirms it on-chain. Only the admin wallet can do this. Deposit addresses do not change, because they are derived from the merchant id and the customer reference, not from the settlement wallet.
+
+## What if a customer underpays or overpays?
+
+The payment is valued at the confirmed amount received.
+
+- Below the requested amount by more than the fill tolerance (0.01 USD by default): `PARTIALLY_FILLED`. A later deposit from the same customer is matched to it and can bring it to `FILLED`. Partially filled payments do not expire automatically.
+- Within the tolerance: `FILLED`.
+- Above the tolerance: `OVER_FILLED`. The whole amount is credited and is swept to your settlement wallet like any other deposit; nothing is returned automatically.
+
+Each state is sent once as a webhook. The checkout page asks for an exact token amount from a quote and states the currency and network; funds sent in another currency or on another network are not credited to that payment.
+
+## What happens when a payment expires?
+
+An `OPEN` payment past its expiry (24 hours by default) becomes `CANCELLED` and a `payment.cancelled` webhook is sent. The checkout page no longer offers a quote or a wallet payment for it.
+
+Funds can still arrive afterwards. A wallet payment whose hash the checkout page submits for that payment, or a transfer that was already detected before cancellation, is credited to the cancelled payment and can move it to a filled state. Any other new deposit to the customer's address after cancellation is not matched to a cancelled payment; it is credited to an open payment of the customer if there is one (preferring one whose current quote has the same currency and exact amount, otherwise the newest), or recorded as an unmatched deposit under the customer. Unmatched deposits are swept like any other balance.
+
+## How do refunds work?
+
+There is no refund feature. Payments arrive at deposit addresses, which have no key and can only be swept to your settlement wallet, and your settlement wallet is not controlled by the server.
+
+If you decide to return funds, the mechanism the software provides is a payout: fund the project's hot wallet with the token, then create a payout to the customer's address from the dashboard or the API. Payouts are subject to the project's limits and approval. See [Payouts](https://docs.recv.fund/features/payouts.md).
+
+## Is there KYC?
+
+No identity verification is built in, and there is no account with recv.fund. Merchants remain responsible for their own legal obligations, including any customer verification their jurisdiction requires.
+
+## Which wallets work on the checkout page?
+
+Injected browser wallets: EVM wallets on Robinhood Chain and Phantom- or Solflare-compatible wallets on Solana. Every currency can be paid from a connected wallet, SOL included: the wallet signs one plain transfer of the quoted amount to the customer's deposit address, with no approval step. WalletConnect is not implemented yet.
+
+Customers without a browser wallet, or paying from an exchange, send to the deposit address shown on the page or in its QR code. The QR code contains the address; the customer must use the currency and network stated on the page. Both ways the funds arrive at the same address.
+
+## Is testnet supported?
+
+Yes. Install with `--testnet` and the install runs against Solana devnet and Robinhood Chain testnet with the test tokens listed in [Networks and tokens](https://docs.recv.fund/support/networks.md). Every payment on such an install is a test payment: the checkout page labels it and the checkout URL carries `test=true`. Use a testnet install first.
+
+## Can I switch between mainnet and testnet?
+
+No. The network type is written to `.env` at install time and every chain, currency, registration and address belongs to it. Changing it requires a reset, which removes the containers, images and data. Run a second install on another server for the other network.
+
+## How do I update?
+
+```bash
+curl -fsSL https://github.com/recv-fund/recvfund-scripts/releases/latest/download/install.sh | sudo bash -s -- --update
+```
+
+The script moves the installation to the newest released version, runs database migrations against the new image and then swaps the containers. Every change to recv.fund is published as a new version number, and a published version never changes, so the version in `IMAGE_TAG` in `/opt/recvfund/.env` tells you exactly what you run. The API refuses to start with unapplied migrations, which is why migrations run first. The same operation is option 2 in the script's menu. See [Script usage](https://docs.recv.fund/deployment-guide/script-usage.md).
+
+## How do I stop the installation?
+
+From `/opt/recvfund`, run `docker compose -p recvfund --profile db stop`. Start it again with `start`. Your data stays in place. Don't use `--reset` to stop: it deletes the containers, images and data. See [Stopping and starting](https://docs.recv.fund/deployment-guide/advanced-setup.md#stopping-and-starting).
+
+## How do I back up?
+
+Three things:
+
+1. The database. With the bundled Postgres: `docker compose -p recvfund exec postgres pg_dump -U recv recv > backup.sql` from `/opt/recvfund`. With an external Postgres, use its own backup.
+2. The `api-uploads` volume, which holds project logos.
+3. `/opt/recvfund/.env`, in particular `AES_ENCRYPTION_KEY`.
+
+Restore is the reverse. See [What to back up](https://docs.recv.fund/deployment-guide/introduction.md).
+
+## What if the hot wallet runs out of native coin?
+
+Sweeps and payouts need SOL or ETH for network fees. A sweep or payout that cannot be funded fails before it is signed and is shown as failed with the reason; nothing is broadcast. Top up the hot wallet and queue the sweep again or create the payout again. There is no low-balance alert in this release, so check the balance under Wallets, Hot wallets.
+
+## Is a transfer straight to my settlement wallet credited?
+
+No. The server credits only transfers into deposit addresses. A wallet payment from the checkout page is such a transfer. A customer must pay through the checkout page or send to their deposit address.
+
+## Where do I get help?
+
+Email `hello@recv.fund`. Read the [Deployment guide](https://docs.recv.fund/deployment-guide/introduction.md) and the [Onboarding guide](https://docs.recv.fund/onboarding-guide/introduction.md) first, and include your server's OS version, the installer flags and the installer output. Report security issues to the same address with "Security" in the subject line. More links are on the [Links](https://docs.recv.fund/support/links.md) page.

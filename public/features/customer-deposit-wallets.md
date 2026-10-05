@@ -1,0 +1,65 @@
+# Customer deposit wallets
+
+Every customer of a project gets one permanent deposit address per chain. Every payment the customer makes goes to it: a wallet payment from the checkout page is a transfer to this address, and the customer can also send any amount to it from any wallet or exchange, at any time. Your server watches the address, credits the funds to a payment, and [sweeps](https://docs.recv.fund/features/sweeps.md) the balance to your settlement wallet. No fee is taken when funds arrive.
+
+## Addresses are derived, not generated
+
+The address is computed from your merchant registration and the customer's random reference. No private key for it exists anywhere.
+
+| Chain | Derivation | Where tokens go |
+| --- | --- | --- |
+| Solana | A program-derived address (PDA) with seeds `deposit`, your merchant account and the customer reference. | SPL tokens go to the mint's associated token account (ATA) owned by that PDA. The PDA itself receives SOL. |
+| Robinhood Chain | A CREATE2 address computed by your merchant contract (`MerchantVault`) from the customer reference. | Tokens and ETH go to that address. It is valid before anything is deployed there; your merchant contract deploys a forwarder contract at the address on its first sweep. |
+
+Funds at a deposit address can move only to your registered settlement wallet and to the fee collector recorded in your registration, and only through a sweep. Deactivating your registration does not block sweeps. On Robinhood Chain the server can derive deposit addresses only after your merchant contract exists, that is, after the registration is confirmed.
+
+An address is assigned the first time the customer selects that chain on the checkout page, or when your system calls [Assign deposit address](https://docs.recv.fund/api-integration/payments-api/assign-deposit-address.md). Assignment requires an active customer, project and merchant registration on that chain; the server checks the live registration state before storing the address. The same address is reused for every later payment by that customer on that chain. Assignment is not a dashboard action. On Solana the API returns the PDA; the receiving address for an SPL token is the currency-specific `customerAddress` from [Deposit options](https://docs.recv.fund/api-integration/payments-api/deposit-options.md).
+
+## The Customers page
+
+**Customers** lists the current project's customers with **Requested** (the sum of their payment amounts), **Received** (the sum of confirmed transfers, including unmatched deposits) and their deposit addresses. Search by email or customer ID.
+
+**Create customer** takes an email and an optional **Customer ID**. Use your own ID to connect the record to your application, or leave it blank and recv.fund generates `cust_` followed by 12 hex characters. IDs are unique within a project; a duplicate returns a conflict. Owners, admins and project leads can create customers; other roles read.
+
+**Customer details** shows each deposit address with its chain, status (`active`, `dormant` or `inactive`) and **Deposit scan**: the time of the last automatic scan, or the current error for an asset on that address, so an RPC problem is visible. It also lists the latest 100 payments and the latest 100 transactions, with full counts.
+
+## How deposits are found
+
+The deposit watcher runs every `watcher.depositsIntervalSeconds` (default 15 seconds) while `watcher.enabled` is true. Each pass visits the 20 least recently scanned addresses and one currency per address, so a large address set is covered over several passes. Progress per address and currency is stored, and a page is only marked complete after every transfer on it has been verified and recorded, so a restart replays safely.
+
+- On Robinhood Chain, scanning starts at the block height recorded when the address was assigned. ERC-20 scans read `Transfer` logs in chunks of `watcher.evmLogBlockChunk` blocks (default 2000). Native ETH scans need an RPC node that supports `debug_traceTransaction` and `debug_traceBlockByHash` with the call tracer, and read at most 64 blocks per page.
+- On Solana, scanning pages the signature history of the PDA or the token account, `watcher.solanaSignatureBatch` signatures at a time (default 200).
+
+RPC nodes must retain the history needed to catch up. See [Node configuration](https://docs.recv.fund/onboarding-guide/node-configuration.md).
+
+## How a deposit is credited
+
+A transfer is credited only from proof read from the chain: the server re-derives the address, verifies the transaction and reads the transferred amount. A balance increase, or an amount reported by a browser, never creates a credit.
+
+`payment.unmatchedDepositPolicy` decides which payment receives it:
+
+| Policy | Behaviour |
+| --- | --- |
+| `credit-latest-open` (default) | The transfer goes to an eligible payment (`open` and unexpired, or `partially-filled`). The server first looks for one whose current quote has the transfer's currency and exact amount, which is the payment a wallet checkout paid even if the watcher sees the transfer before the page confirms it; otherwise it takes the customer's newest eligible payment. If the payment restricts the chain or currency, the transfer must match. The first matched transfer sets the payment's currency, chain and deposit address, so the customer does not have to open the checkout page before sending. |
+| `leave-unmatched` | Every deposit is recorded without a payment. |
+
+`filled`, `over-filled` and `cancelled` payments never receive new matches. When no eligible payment exists, the transfer is stored as an unmatched deposit: it has no payment, stays visible in the customer's history through its deposit address, counts in the customer's **Received** total and in [Analytics](https://docs.recv.fund/features/analytics.md), and is swept like any other balance. The binding is fixed at first detection: replaying an old unmatched transfer never pays a payment created later, and a transfer matched before its payment was cancelled still credits that payment.
+
+Deposits follow the confirmation and valuation rules in [Payment links](https://docs.recv.fund/features/payment-links.md#confirmations-and-valuation). The transfer's fee is recorded as null because the fee is taken at sweep time.
+
+A wallet payment from the checkout page is a deposit like any other, with one difference: when the page submits its hash and the server records the transfer for the first time, the transfer is credited to the payment that was being paid, whatever other payments are open. If the deposit watcher recorded the transfer first, the watcher's match is kept, and the checkout confirmation returns a conflict when that match is not the payment being paid. A transfer in any supported currency is recorded even if that currency has since been disabled for the project.
+
+## Missed-payment reports
+
+If a customer sent funds and nothing was credited, report the transaction under **Missed payments**. Choose the network, paste the **Transaction hash or signature** and an optional note (up to 2000 characters). Owners, admins and project leads can submit; project managers can read. A project can have at most 100 open reports; resubmitting the same hash returns the existing report.
+
+A worker checks the ten least recently checked open reports per pass, on the same interval and switch as confirmations. For each report it:
+
+1. Verifies the transaction and its confirmation depth. Unknown or unconfirmed transactions, and RPC nodes without the history, leave the report `open` with a retry message. A confirmed failed transaction makes it `rejected`.
+2. Rechecks the customer's addresses and currencies against the transaction, ten address and currency pairs per pass, ignoring the automatic scan's starting height. This recovers a transfer sent before the address was assigned, or to an address or currency that was inactive.
+
+A confirmed transfer recorded for the project makes the report `credited`, including a deposit kept without a payment. A confirmed transaction with a complete, error-free scan and no matching transfer is `rejected`; add the missing address or currency and resubmit, which reopens the report. Open rows on the page refresh every ten seconds.
+
+## Not in this release
+
+Reconciliation after a deep chain reorganisation is not implemented. Confirmed transfers are treated as final once they reach the chain's confirmation threshold.

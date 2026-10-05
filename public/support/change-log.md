@@ -1,0 +1,112 @@
+# Change log
+
+Short release notes are on the [What's new](https://docs.recv.fund/whats-new.md) page. This page is the full record.
+
+Since 0.1.2, every change to recv.fund is published as a new version number, and a published version never changes. `--update` installs the newest version.
+
+## 0.1.7 (2026-10-05)
+
+- Setup is its own page (sidebar: **Setup**). It shows **Integration status**: live checks of the server, RPC nodes, the recv.fund contract, hot wallet fee balances, registrations, and sweeps, payouts and webhook deliveries that failed in the last seven days, each linked to the page that fixes it. The step-by-step guide follows on the same page.
+- Every other page shows a reminder banner to owners and admins until setup is complete. The Overview page shows reporting only.
+
+## 0.1.6 (2026-10-05)
+
+- Hot wallet import accepts keys as wallets export them: the base58 private key from Phantom or Solflare, a Solana CLI keypair array, and an EVM key from MetaMask with or without `0x`.
+- The setup guide always works on one project, and it no longer offers an installation-only view.
+
+## 0.1.5 (2026-10-05)
+
+- The installation connects to the recv.fund program (Solana) and factory contract (Robinhood Chain) by itself. Each release ships the addresses of its deployments; at startup and every five minutes, the server sets the one for each network that has none yet, after checking its code. An address that is already set is never changed.
+- Nodes shows the recv.fund deployment as verified, or as connecting with the last error and a **Connect now** button. Another address can still be entered under **Use a different deployment (advanced)**.
+- The **recv.fund contract** step of the setup guide is a check, not a task.
+
+## 0.1.4 (2026-10-05)
+
+- Dashboard typography and contrast: system fonts, clearer text colors, and the registration step summarized as three short facts.
+
+## 0.1.3 (2026-10-05)
+
+- The setup guide on the Overview page shows one step at a time for the selected project and network, with links to the right section of each page and back, **Check again**, and an explorable "How money moves" panel.
+- Installer 0.1.3: `--http-bind` publishes the HTTP port on one address only, and `--site-url` sets the site URL without the prompt. See [Script usage](https://docs.recv.fund/deployment-guide/script-usage.md).
+
+## 0.1.2 (2026-10-05)
+
+- The Overview page starts with a **Set up payments** guide covering the site URL, RPC nodes, contract, hot wallet, registration, currencies, a test payment and email.
+- Every change is released as a new version. The installer looks up the newest version when it runs, instead of a version fixed in the installer.
+
+## 2026-09: Initial release
+
+The first public release of recv.fund. The mainnet factory and program are not deployed yet, so payments can be taken only on the test networks.
+
+On 2026-10-03 the test network deployments were replaced by the payment model described below: customers pay their deposit address directly, the fee is taken only at sweep and is fixed per registration, and registration is one transaction. The Robinhood Chain testnet registry `0xBe4E003224977110100463EcC70D399bA0f1c9F8` and the Solana devnet program `G9u3a8P6T5RFsgQhjVC5Yw7oAUqURst5MQJi1rFVkzAt`, both deployed on 2026-09-30, are superseded. The current addresses are listed under [Networks and tokens](https://docs.recv.fund/support/networks.md#program-addresses).
+
+### Chains and tokens
+
+- Solana (`SOLANA`): USDC, USDT and SOL on mainnet; USDC and SOL on devnet.
+- Robinhood Chain (`ROBINHOOD`): USDG and ETH on mainnet and testnet.
+- Seeded public RPC endpoints and explorers per network. Up to ten RPC nodes per chain, with a preferred node and automatic failover for reads.
+- Default confirmations of 1 on Solana and 12 on Robinhood Chain, with a per-project override.
+
+### Installation
+
+- One-line installer for mainnet or testnet: installs Docker if missing, asks for network type, Postgres (bundled or external) and HTTPS (Let's Encrypt or plain HTTP), generates secrets, runs migrations and starts the stack.
+- Update, restart, status and reset operations from the same script.
+- Compose stack of Caddy, API, web app, Redis and optional bundled Postgres, with dashboard, checkout and API on one origin.
+
+### Accounts and projects
+
+- Root account wizard at `/signup`; email and password login with session refresh.
+- Team roles: owner, admin, project lead, project manager and project ops. Invitations with a temporary password.
+- Projects with branding (logo, color, redirect URLs), enabled currencies, API keys, webhook endpoints and payout limits.
+- Activity log of write and denied requests.
+- Settings for site URL, SMTP, native coin pricing and WalletConnect project id.
+
+### On-chain registration and wallets
+
+- Merchant registration per project per chain in one transaction, signed in the browser with an injected wallet. The signing wallet becomes the admin; the cold wallet (settlement address), the sweeper, the fee rate and the fee collector are recorded on-chain. On Robinhood Chain the transaction creates the merchant's own contract (`MerchantVault`) through the recv.fund factory; on Solana it creates the merchant account of the recv.fund program.
+- Settlement wallet, sweeper and active-flag updates, prepared by the server and signed by the admin wallet. The fee rate and fee collector of a registration cannot be changed.
+- Hot wallets per chain family, generated or imported in the dashboard and stored encrypted. Balance reads on request.
+- Deposit addresses derived from the merchant registration (Solana PDA, Robinhood Chain CREATE2 address of the merchant contract). No deposit keys on the server.
+
+### Payments
+
+- Payment links from the dashboard and `POST /api/v1/payment` from the API, with USD amounts, optional currency and network restriction, and expiry.
+- Hosted checkout page with currency selection, exact quotes, deposit address and QR code, and wallet payment for every currency, SOL included. A wallet payment is one plain transfer from the customer's wallet to the customer's deposit address; no recv.fund contract or program instruction runs and no fee is taken.
+- Deposit discovery per address and currency with resumable progress, matching to the eligible payment whose quote has the same currency and exact amount, otherwise the customer's newest eligible payment, and unmatched deposits kept under the customer. A wallet payment whose hash the checkout page submits is credited to the payment that was paid; one the page never reports is found by deposit discovery.
+- Confirmation tracking with `payment.confirming` progress events, fill tolerance, and the states `OPEN`, `PARTIALLY_FILLED`, `FILLED`, `OVER_FILLED` and `CANCELLED`.
+- Missed payment reports: submit a transaction hash for verification and credit.
+- Payment history with search, filters, detail and CSV export.
+
+### Sweeps
+
+- Automatic sweeps per project and chain with an activation threshold and amount, count and time triggers.
+- Manual sweeps of selected addresses and currencies.
+- One fee, at most 2%, taken only at sweep at the rate fixed in the registration. If the fee collector cannot receive the fee, it goes to the settlement wallet and the sweep completes.
+- Signed transactions are stored before broadcast and confirmed from the `DepositSwept` event.
+
+### Payouts
+
+- Payout requests from the dashboard and from `POST /api/v1/withdrawal/merchant`, in token units, from the project's hot wallet.
+- Address book per project.
+- USD limits per recipient email: minimum, hourly, daily and auto-approve maximum.
+- Approval by a one-time code emailed to an administrator. Idempotency keys and duplicate detection.
+- Payout lifecycle webhooks.
+
+### API and webhooks
+
+- Payments and payouts API with PayRam-compatible paths, field names and states, authenticated with the `API-Key` header.
+- Public ticker (`GET /api/v1/ticker`) with the current USD price of every active currency.
+- Signed webhooks (`X-Recv-Signature`, HMAC-SHA256) with a ten-attempt retry schedule, delivery history and manual redelivery.
+
+### Analytics
+
+- Dashboard with confirmed receipts, volume and payer activity per project and period.
+
+### Not in this release
+
+- WalletConnect on the checkout page and in registration. Only injected browser wallets are supported.
+- Mainnet deployments of the Robinhood Chain factory and the Solana program.
+- Low-balance email alerts for hot wallets.
+- Operator mode (one install serving several merchants with a markup).
+- Automatic reconciliation after a deep chain reorganisation.
+- Token-2022 mints on Solana.

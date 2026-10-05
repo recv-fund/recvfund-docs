@@ -1,0 +1,78 @@
+# Onboarding guide
+
+This guide takes a fresh installation from the signup page to a confirmed test payment and a first sweep. It assumes the server is installed and healthy; see the [Deployment guide](https://docs.recv.fund/deployment-guide/introduction.md) if it is not.
+
+Everything below happens in the dashboard. Nothing in this guide requires shell access to the server except a restart, and the installer does that for you.
+
+## The steps
+
+| Step | Page | What it does |
+| --- | --- | --- |
+| 1 | [Root account setup](https://docs.recv.fund/onboarding-guide/root-account-setup.md) | Create the owner account and first project at `/signup`, sign in, set the site URL and email delivery, invite teammates. |
+| 2 | [Node configuration](https://docs.recv.fund/onboarding-guide/node-configuration.md) | Check the RPC nodes for each network and review the currency catalog. The installation connects to the recv.fund program (Solana) and factory contract (Robinhood Chain) by itself; Nodes shows that it is verified. |
+| 3 | [Hot wallet](https://docs.recv.fund/onboarding-guide/hot-wallet.md) | Generate or import the one key the server holds, assign it to the project, fund it with SOL or ETH. |
+| 4 | [Merchant registration](https://docs.recv.fund/onboarding-guide/merchant-registration.md) | Register the project on-chain with one transaction from your browser wallet: cold wallet (settlement address) and sweeper. The fee is fixed for the registration at this point. |
+| 5 | [Test payment](https://docs.recv.fund/onboarding-guide/test-payment.md) | Create a customer and a payment link, pay it, watch it confirm. |
+| 6 | [Funds sweeping](https://docs.recv.fund/onboarding-guide/funds-sweeping.md) | Move deposit balances to the settlement wallet, automatically or by hand. |
+
+The hot wallet comes before registration because registration writes the hot wallet address on-chain as the merchant's sweeper. The dashboard refuses to prepare a registration until an active hot wallet is assigned to the project for that chain family.
+
+Steps 2, 3 and 4 repeat for every chain you want to accept payments on. Step 4 also repeats for every project.
+
+## The Setup page
+
+Open **Setup** in the sidebar. Until payment setup is complete, every other page shows a reminder banner with a **Continue setup** link to it; owners and admins see the banner. Setup is complete when every required step is done on at least one network for the project.
+
+The page has two parts.
+
+**Integration status** checks what can stop payments, each time you open the page or select **Run checks again**. It changes nothing.
+
+- **Server:** the database and Redis answer.
+- **For each network:** whether the RPC nodes answer, whether the recv.fund contract is verified, whether the project's hot wallet holds SOL or ETH for network fees, and whether the project's registration is active.
+- **Project activity:** sweeps, payouts and webhook deliveries that failed in the last seven days.
+
+Each problem links to the page that fixes it. Checks your role can't read are left out.
+
+**Set up payments** walks through the steps in the same order as this guide. Choose the **Project** and the **Network** at the top. The steps are listed on the left, grouped by where they apply:
+
+- **Installation:** **Site URL**, **RPC connection** and **recv.fund contract**. The contract step is a check, not a task: the installation connects to the recv.fund program (Solana) or factory contract (Robinhood Chain) by itself, and the step shows it as verified with the fee for new registrations.
+- **Project:** **Hot wallet**, **Register your wallets** (the one transaction you sign and pay for with your browser wallet), **Accepted currencies** and **Test payment**. Test payment is done once a payment of the project reaches `FILLED` or `OVER_FILLED`.
+- **Optional:** **Email (SMTP)**, which only payout approvals need.
+
+Select a step to see its explanation, its status on the selected network, and a button that opens the right section of the right page. Those pages show a **Payment setup guide** link that brings you back to the same step. **Check again** reloads every status after you change something. **Previous** and **Next step** move through the list. Network checks apply only to the selected network; repeat the network steps for each network you want to accept. Below the steps, **How money moves** shows the path of a payment; select a stage to read what happens there.
+
+{/* prettier-ignore */}
+> [!NOTE]
+>
+> The Setup page and the banner are in version 0.1.7 and later. In 0.1.3 to
+> 0.1.6 the guide is at the top of the Overview page.
+
+## What you need
+
+| Item | Why |
+| --- | --- |
+| The signup URL printed by the installer | It is `https://<your site>/signup`. It works only until the first account exists. |
+| A browser wallet with a little SOL or ETH | Registration is an on-chain transaction signed in your browser. Solana: Phantom, Solflare or another injected Solana wallet. Robinhood Chain: MetaMask or another injected EVM wallet. This wallet becomes the merchant admin key; keep it. WalletConnect is not available in this release, so use a desktop browser with a wallet extension. |
+| A cold wallet (settlement address) per chain | The address that receives your funds when deposits are swept. Only a transaction signed by the merchant admin wallet can change it later. |
+| An SMTP server | Payout approval codes are sent by email. Payments and sweeps do not need email. Configure it early so the test email and payouts work when you get to them. |
+| Native currency for the hot wallet | The hot wallet pays the network fee of every sweep and sends payouts. On testnet, use a faucet. |
+
+On testnet installs the chains are Solana devnet and Robinhood Chain testnet, and every payment carries a test flag. See [Networks](https://docs.recv.fund/support/networks.md) for the networks, chain IDs and explorers.
+
+## What "ready to accept payments" means
+
+A chain being listed in the dashboard does not enable checkout on it. For a project to accept a payment on a chain, all of the following must be true:
+
+| Requirement | Where |
+| --- | --- |
+| The installation is connected to the recv.fund deployment for that network (automatic) | Nodes → recv.fund deployment |
+| The project has an active merchant registration on that chain | Registrations |
+| At least one currency of that chain is enabled for the project | Projects → Enabled currencies |
+| A hot wallet for the chain family is assigned to the project | Hot wallets |
+| The site URL is set | Installation → Site URL (needed to generate payment links) |
+
+The checkout page lists only currencies whose chain has an active registration for the project. If the list is empty, the customer sees "No payment currencies are available."
+
+## Who can do what
+
+The owner account created at signup can do everything. If you invite teammates, note that only owners and admins can manage nodes, generate or import hot wallets and change installation settings. Project leads can assign an existing hot wallet, register on-chain, create payment links and queue sweeps for their projects. See [User management](https://docs.recv.fund/features/user-management.md) for the full role table.

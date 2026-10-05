@@ -1,0 +1,42 @@
+# Verify and troubleshoot
+
+Record the instance version, project, network, payment reference and check time. Redact credentials and customer identifiers in any shared report. Never read secret-bearing environment files into an agent transcript.
+
+## Troubleshooting map
+
+| Symptom | Check | Next action |
+| --- | --- | --- |
+| Setup never completes | Select the intended project and network; read readiness blockers | Complete the next prerequisite on that network |
+| Contract shows connected | This means readable configuration, not an independent audit | Compare expected deployment/authority and review security evidence separately |
+| Checkout has no currencies | Active project, registration, currencies and network | Enable a supported currency on a registered network |
+| Price unavailable | Pricing provider/cache freshness; native currencies require a live quote | Restore pricing; do not substitute a made-up or stale price |
+| Wallet submitted but payment pending | Checkout transfers and confirmation counts | Wait for required confirmations; do not fulfill from the wallet hash alone |
+| Payment sent but absent | Exact network, recipient, token/mint and transaction hash | Check through checkout's transaction helper or dashboard Missed payments |
+| Partial payment | Confirmed amount, remaining quote, currency and same deposit address | Refresh the quote and explain the remaining amount |
+| Request returns 409 | Existing transaction ownership, stale quote or payout terms | Re-read state; never manually re-credit a transaction |
+| Webhook failed | Delivery status, attempts, last error, endpoint activation, SEND_WEBHOOKS | Fix receiver, verify signatures, then retry through Developers |
+| Sweep blocked | Registered sweeper, assigned active wallet, native gas, project/network status | Correct the failing prerequisite and preserve signed transaction identity |
+| Payout uncertain | Existing status and transaction hash on the chain | Reconcile that transaction; never submit a replacement blindly |
+
+## Evidence levels
+
+- **Configured:** database settings exist and agree. This does not prove the RPC, provider or receiver answers.
+- **Live check passed:** a specific dependency answered at the recorded time. It does not prove end-to-end settlement.
+- **Payment observed:** the ledger records a confirmed invoice on the selected chain. It can be historical; check its date.
+- **Release accepted:** the exact installed release completed funded testnet checkout, webhook handling and settlement, plus restore/operational checks.
+- **Contract reviewed:** named revision, tools, rules, findings and manual review are recorded. This is not a guarantee against all exploits.
+
+## Required integration acceptance
+
+Run against your actual test installation and merchant backend, not a mocked success response:
+
+1. Create one invoice and record its reference. Confirm wrong/missing project keys cannot read it.
+2. Pay from a test wallet, observe pending confirmations, then confirmed state and the exact receipt amount.
+3. Deliver a valid webhook; confirm exactly one fulfillment. Replay it and send an older event; the order must not be fulfilled twice or downgraded.
+4. Tamper with the body/signature; verify rejection. Kill the receiver after committing but before returning 2xx; the retry must remain safe.
+5. Pay partially, refresh checkout and verify the remaining amount; do not fulfill early.
+6. Exercise expiry, invalid hash, wrong network/currency and stale quote. Errors must explain a valid next action.
+7. Authorize a test sweep and confirm the settlement address and fee event.
+8. If payouts are needed, test explicit approval, limit rejection, same-key retry and changed-key-terms conflict using test funds.
+
+Report what was actually run. A fixture browser test verifies UI states; a local chain test verifies protocol integration; neither alone proves public testnet RPC reliability, production image behavior or a deployed program's bytecode.

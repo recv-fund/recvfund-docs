@@ -1,0 +1,21 @@
+# Operator mode
+
+Operator mode is planned and is not available in this release.
+
+The intended model: an agency or marketplace runs one recv.fund install for the merchants it serves and sets a markup on top of the recv.fund fee. How the current contracts and program would support it is not specified, and there is no date for it.
+
+## What one install does today
+
+One install serves one business. Inside it you can create any number of [projects](https://docs.recv.fund/features/multi-brand-projects.md), and each project has its own:
+
+- name, logo, brand colour and redirect URLs on the checkout page;
+- enabled currencies;
+- merchant registration per chain with its own settlement wallet;
+- hot wallet assignment per chain family;
+- API keys and webhook endpoints;
+- payout policy and address book;
+- sweep settings;
+- customers, payments, deposit addresses and payouts;
+- team members with project-scoped roles.
+
+Every sweep pays the recv.fund fee to the fee collector recorded in that project's registration. There is no facility for the install's owner to add a fee of their own to another project's sweeps. If you run projects for third parties today, any charge between you and them is outside recv.fund.

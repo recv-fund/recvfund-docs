@@ -39,7 +39,10 @@ nginx to it (runbook: `recvfund-planning/ops/DEPLOYMENT.md`).
 app/                 Next root layout, catch-all page, global styles
 content/             MDX pages and _meta.ts sidebar definitions
 public/llms.txt      one line per page, for language-model readers (generated)
-scripts/llms-txt.mjs writes public/llms.txt from page front matter; runs before next build
+public/llms-full.txt complete documentation with source URLs (generated)
+public/**/*.md      linked Markdown versions of every content page (generated)
+public/examples/    downloadable webhook signature verification helper
+scripts/llms-txt.mjs exports index, full text and Markdown before next build
 types/css.d.ts       declaration for global stylesheet imports
 ```
 
@@ -53,6 +56,7 @@ types/css.d.ts       declaration for global stylesheet imports
 | `content/features/` | Overview, Payment links, Customer deposit wallets, Projects, API keys, User management, Analytics, Payouts, Sweeps, Webhooks, Operator mode |
 | `content/api-integration/` | Introduction, Payments API (overview, create payment, deposit options, assign deposit address, payment status, webhook), Checkout endpoints, Payouts API |
 | `content/support/` | Glossary, Networks and tokens, Links, Change log, FAQ |
+| `content/agents/` | Copyable brief, setup, payment integration, verification, security and permissions |
 
 Every page states only what `../recvfund-server/docs/*.md` and the server
 code implement. Pages about contracts, the fee and the program addresses
@@ -62,7 +66,7 @@ the deposit-only payment model of the server branch
 `feat/deposit-only-settlement`: every customer payment is a transfer to the
 customer's deposit address, the fee is taken only at sweep and is fixed per
 registration, and registration is one transaction. Features that are planned but not implemented (WalletConnect,
-low-balance alerts, operator mode, the public ticker endpoint, deep-reorg
+low-balance alerts, operator mode, deep-reorg
 reconciliation) are marked as not available in this release. When the server
 changes, update the page that describes it in the same change.
 
@@ -79,6 +83,7 @@ changes, update the page that describes it in the same change.
 ```bash
 yarn typecheck
 yarn biome:ci
+yarn test:examples # raw-body HMAC verification and generated-doc link checks
 yarn build        # fails on a bad _meta.ts key, invalid front matter or an MDX error
 ```
 
@@ -93,7 +98,18 @@ theme's Layout props validation fails on every page.
   reused in `public/llms.txt`; keep the two in sync.
 - Plain technical language, second person, short sentences. Commands and
   payloads go in code blocks.
-- API reference pages must match `recvfund-server/docs/API.md` exactly.
+- API reference pages must match `recvfund-server/docs/API_REFERENCE.md` and
+  the running instance's OpenAPI. Agent workflows also follow `docs/AGENT_API.md`.
+
+## Agent documentation (2026-10-05)
+
+The guide at `/agents/` covers installation through verified payment and
+settlement, authentication boundaries, exact amounts, webhook verification,
+durable deduplication, uncertain writes and human-approved fund operations.
+All 45 content pages export to Markdown; `llms.txt` links to those versions and
+`llms-full.txt` combines them with absolute links. Page metadata advertises the
+Markdown alternative. The public site is never the destination for merchant keys.
+Capabilities, project readiness and OpenAPI come from the merchant installation.
 
 ## Handover rule
 

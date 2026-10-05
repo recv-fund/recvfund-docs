@@ -1,0 +1,35 @@
+# Payments API
+
+A payment is a request for a USD amount from one customer. It is created by your server, paid by the customer on the hosted checkout page, through your own page built on the [checkout endpoints](https://docs.recv.fund/api-integration/checkout-endpoints.md), or by a transfer to a deposit address, and reported back to you by webhook and by the status endpoint.
+
+All four endpoints take the `API-Key` header and are scoped to that key's project. See the [Introduction](https://docs.recv.fund/api-integration/introduction.md) for authentication, errors and rate limits.
+
+| Method | Path | Purpose | Page |
+| --- | --- | --- | --- |
+| POST | `/api/v1/payment` | Create a payment and get the checkout URL. | [Create payment](https://docs.recv.fund/api-integration/payments-api/create-payment.md) |
+| GET | `/api/v1/blockchain-currency/reference/{reference_id}` | List the currencies the customer can pay with, and any deposit address already assigned. | [Deposit options](https://docs.recv.fund/api-integration/payments-api/deposit-options.md) |
+| POST | `/api/v1/deposit-address/reference/{reference_id}` | Derive the customer's permanent deposit address on a chain and select that chain for the payment. | [Assign deposit address](https://docs.recv.fund/api-integration/payments-api/assign-deposit-address.md) |
+| GET | `/api/v1/payment/reference/{reference_id}` | Read the payment state, filled amounts and confirmation progress. | [Payment status](https://docs.recv.fund/api-integration/payments-api/payment-status.md) |
+| GET | `/api/v1/ticker` | Current USD price of every active currency; no API key. | [Ticker](https://docs.recv.fund/api-integration/payments-api/ticker.md) |
+| POST to your URL | payment events | Signed delivery of every state change and every confirmation step. | [Payment webhook](https://docs.recv.fund/api-integration/payments-api/webhook.md) |
+
+## Payment states
+
+| `paymentState` | Meaning |
+| --- | --- |
+| `OPEN` | Created, not yet paid. Expires at `expiresAt` unless paid. |
+| `PARTIALLY_FILLED` | Confirmed funds are below the requested amount by more than the fill tolerance (`payment.fillToleranceUsd`, default `0.01` USD). Does not expire; later transfers can still complete it. |
+| `FILLED` | Confirmed funds are within the tolerance of the requested amount. |
+| `OVER_FILLED` | Confirmed funds exceed the requested amount by more than the tolerance. |
+| `CANCELLED` | Expired while open, or cancelled from the dashboard. A transfer confirmed after cancellation still credits the payment and moves it to one of the filled states. |
+
+Amounts count only after the chain's confirmation threshold is reached. A transfer that is detected but not yet confirmed shows in `confirmationCurrent` and in `payment_info` of the webhook, and contributes no USD until confirmed.
+
+## Two ways a payment gets paid
+
+Both end at the customer's permanent per-chain deposit address. No fee is taken when the customer pays; funds rest at the address until a [sweep](https://docs.recv.fund/features/sweeps.md) moves them to your settlement wallet, minus the fee.
+
+- **Wallet checkout.** The customer's wallet signs one plain transfer of the quoted amount to their deposit address, built by the checkout page. No recv.fund contract or program instruction runs. Available for every currency, SOL included. When the checkout page submits the transaction hash, the transfer is credited to the payment being paid.
+- **Deposit address.** The customer sends the token to their deposit address from any wallet or exchange. The deposit watcher credits the customer's open payment whose current quote has the same currency and exact amount, otherwise the customer's newest eligible open payment.
+
+Both are described for customers in [Customer deposit wallets](https://docs.recv.fund/features/customer-deposit-wallets.md) and [Payment links](https://docs.recv.fund/features/payment-links.md).

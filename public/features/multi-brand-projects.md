@@ -1,0 +1,67 @@
+# Projects
+
+A project is one brand or store inside your install. Customers, payments, deposit addresses, payouts, API keys and webhook endpoints all belong to a project. The first project is created with the root account at setup. Owners and admins can create more under **Projects**.
+
+## Project switcher
+
+The dashboard shell has a project selector. List pages show the selected project, or all projects you can see. Owners and admins see every project; other roles see the projects they were assigned in [User management](https://docs.recv.fund/features/user-management.md). The server checks project membership on every request independently of what the UI shows.
+
+## What is configured per project
+
+### Branding
+
+Shown on the project's checkout page.
+
+| Field | Rule |
+| --- | --- |
+| Name | The merchant name the customer sees. |
+| Website URL, Success redirect URL, Cancel redirect URL | HTTP(S) URLs. The redirect URLs are returned to the checkout page with the payment. |
+| Brand colour | Six-digit hex colour. |
+| Logo | PNG, JPEG or SVG up to 512 KB. The upload is decoded, converted to PNG and resized to fit 512 by 512. SVG files containing scripts, external references, entities or embedded HTML are rejected. The original file is never served. Logos are stored in the `api-uploads` volume; back it up with the database. |
+| Custom CSS | Stored, up to 32 KiB. Not applied to the checkout page in this release. |
+
+Owners, admins and project leads can edit branding.
+
+### Enabled currencies
+
+**Enabled currencies** lists every active currency on the active chains of your install's network (mainnet or testnet), for example USDC, USDT and SOL on Solana and USDG and ETH on Robinhood Chain. Tick the ones this project accepts. The checkout page and the API's deposit options show only enabled currencies whose chain has an active merchant registration for the project. Enabling a currency that is inactive or on another network fails. See [Networks](https://docs.recv.fund/support/networks.md).
+
+### Withdrawal policy
+
+Limits for [payouts](https://docs.recv.fund/features/payouts.md), evaluated in USD:
+
+| Field | Meaning |
+| --- | --- |
+| Minimum (USD) | Overrides the install-wide minimum (`payout.minimumUsd`, default 1). Blank inherits it. The effective minimum is shown above the form. |
+| Automatic approval maximum (USD) | Ceiling for automatic approval of API payouts. |
+| Daily limit per recipient (USD) | Rolling 24-hour limit per recipient email. Blank removes the cap. |
+| Hourly limit per recipient (USD) | Rolling one-hour limit per recipient email. Blank removes the cap. |
+| Allow automatic API payout approval up to the configured maximum | When ticked, API payouts at or below the maximum skip administrator approval. Requires a positive maximum. Dashboard payouts always need approval. |
+
+Only owners and admins change the withdrawal policy.
+
+### Developers
+
+API keys and webhook endpoints are created per project on the **Developers** page. A key authenticates only its own project's payments and payouts; an endpoint receives only its own project's events. See [API keys](https://docs.recv.fund/features/api-keys.md) and [Webhooks](https://docs.recv.fund/features/webhooks.md).
+
+### Wallets and registration
+
+Each project has one hot wallet assignment per chain family (Solana, EVM) and one on-chain merchant registration per chain with its own settlement wallet. See [Hot wallet](https://docs.recv.fund/onboarding-guide/hot-wallet.md) and [Merchant registration](https://docs.recv.fund/onboarding-guide/merchant-registration.md).
+
+### Sweep settings
+
+Each project can override the install's sweep thresholds or use the defaults. See [Sweeps](https://docs.recv.fund/features/sweeps.md).
+
+### Address book
+
+Saved payout destinations are per project. The same address can be saved in another project independently.
+
+## Roles inside a project
+
+| Action | Roles |
+| --- | --- |
+| Create a project, deactivate it, change its withdrawal policy | owner, admin |
+| Edit branding, logo, enabled currencies, API keys, webhook endpoints | owner, admin, project-lead (in their projects) |
+| Read project settings | any member |
+
+Every mutation locks the project and rechecks the acting user and their membership inside the same transaction, so a role change takes effect immediately.

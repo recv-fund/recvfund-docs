@@ -119,3 +119,7 @@ trailers), update this README and `docs/` so they stay true, and append a
 dated entry to `../recvfund-planning/PROGRESS.md` (Handover log) with what
 changed, what was verified and how, what is broken, and the next step. Full
 rule: `../AGENTS.md`.
+
+
+CI validates pushes to both `main` and `staging`. Public deployment is restricted
+to `main`, including manual dispatch; staging checks never replace the live site.

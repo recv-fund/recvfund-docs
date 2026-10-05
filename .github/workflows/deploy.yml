@@ -13,11 +13,11 @@ name: deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
   workflow_dispatch:
 
 concurrency:
-  group: deploy
+  group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -46,7 +46,7 @@ jobs:
 
   deploy:
     needs: build
-    if: vars.DEPLOY_ENABLED == 'true'
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     env:
       APP_DIR: /var/www/recvfund/docs

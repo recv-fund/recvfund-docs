@@ -41,7 +41,7 @@ export default async function RootLayout({
   const pageMap = await getPageMap();
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
-      <Head faviconGlyph="r" />
+      <Head />
       <body>
         <Layout
           navbar={navbar}

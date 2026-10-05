@@ -24,7 +24,7 @@ Two forms at the bottom of the page, for owners and admins only.
 
 **Generate hot wallet.** Wallet name and Chain family, then "Generate wallet". The server creates the key, encrypts it and returns only the derived address.
 
-**Import hot wallet.** Wallet name, Chain family and Private key, then "Import wallet". Accepted formats: a 0x-prefixed 32-byte hexadecimal key for `evm`; a 64-byte keypair as a JSON array for `solana` (the format Solana CLI writes). The input clears after a successful import and the key is never shown again.
+**Import hot wallet.** Wallet name, Chain family and Private key, then "Import wallet". Paste the key as your wallet exports it: for `solana`, the private key string from Phantom or Solflare or a Solana CLI keypair file's array of 64 numbers; for `evm`, the 64-character hexadecimal key from MetaMask, with or without `0x`. The input clears after a successful import and the key is never shown again.
 
 Either way the key is encrypted with AES-256-GCM under the `AES_ENCRYPTION_KEY` from `/opt/recvfund/.env` before it is written to the database. The API never returns it, there is no export, and neither valid nor invalid key input is logged. Back up the database and the `.env` file: if `AES_ENCRYPTION_KEY` is lost, the wallet cannot be recovered from the database. If you imported a key, keep your own copy of it as well.
 

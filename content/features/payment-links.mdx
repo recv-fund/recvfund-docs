@@ -9,7 +9,7 @@ A payment is a request for a USD amount from one customer of one project. It has
 
 ## Creating a payment
 
-**From the dashboard.** Open **Payments** and use **Create payment link**. Pick a customer with **Find customer** (search by email or customer ID), enter **Amount (USD)** and optionally an **Invoice ID**. The link is shown after saving. Owners, admins and project leads can create links. Creation needs an active project, an active customer in that project, and a configured site URL (Installation → Site URL).
+**From the dashboard.** Open **Payments** and use **Create payment link**. Pick a customer with **Find customer** (search by email or customer ID); a full email address that matches no customer offers **Create customer**, which creates and selects it, enter **Amount (USD)** and optionally an **Invoice ID**. The link is shown after saving. Owners, admins and project leads can create links. Creation needs an active project, an active customer in that project, and a configured site URL (Installation → Site URL).
 
 **From the API.** `POST /api/v1/payment` with the project's `API-Key` header creates the customer if needed and returns `reference_id` and the checkout `url`. See [Create payment](/api-integration/payments-api/create-payment/).
 

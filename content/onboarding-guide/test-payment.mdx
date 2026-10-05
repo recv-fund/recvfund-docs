@@ -11,7 +11,7 @@ Before you start: an active registration on at least one chain, at least one cur
 
 ## 1. Create a customer
 
-Every payment belongs to a customer. Open Customers (`/customers`), select the project in the sidebar and use "Create customer": Customer email, and optionally Customer ID, your own identifier for this person. If you leave the ID blank the server generates one of the form `cust_` followed by 12 hexadecimal characters. IDs are unique within a project.
+Every payment belongs to a customer. You can create one from the payment link form in the next step by typing their email, or here: open Customers (`/customers`), select the project in the sidebar and use "Create customer": Customer email, and optionally Customer ID, your own identifier for this person. If you leave the ID blank the server generates one of the form `cust_` followed by 12 hexadecimal characters. IDs are unique within a project.
 
 The customer's row shows Requested and Received totals and a count of deposit addresses, which starts at 0. Addresses are assigned when the customer picks a chain at checkout, not when the customer is created.
 
@@ -21,7 +21,7 @@ Open Payments (`/payment-links`) with the project selected and fill in "Create p
 
 | Field | Notes |
 | --- | --- |
-| Find customer | Type part of the email or customer ID; matching customers of the project appear in the Customer list. |
+| Find customer | Type part of the email or customer ID; matching customers of the project appear in the Customer list. If you type a full email address that no customer has, a **Create customer** button creates the customer and selects it (owners, admins and project leads). |
 | Customer | Pick one. |
 | Amount (USD) | A positive amount with up to 6 decimal places. All invoices are denominated in USD; the token amount is quoted at checkout. |
 | Invoice ID (optional) | Your own label. It is shown to the customer and searchable, but it is not unique. |

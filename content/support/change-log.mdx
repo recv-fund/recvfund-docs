@@ -9,6 +9,16 @@ Short release notes are on the [What's new](/whats-new/) page. This page is the 
 
 Since 0.1.2, every change to recv.fund is published as a new version number, and a published version never changes. `--update` installs the newest version.
 
+## 0.1.7 (2026-10-05)
+
+- Setup is its own page (sidebar: **Setup**). It shows **Integration status**: live checks of the server, RPC nodes, the recv.fund contract, hot wallet fee balances, registrations, and sweeps, payouts and webhook deliveries that failed in the last seven days, each linked to the page that fixes it. The step-by-step guide follows on the same page.
+- Every other page shows a reminder banner to owners and admins until setup is complete. The Overview page shows reporting only.
+
+## 0.1.6 (2026-10-05)
+
+- Hot wallet import accepts keys as wallets export them: the base58 private key from Phantom or Solflare, a Solana CLI keypair array, and an EVM key from MetaMask with or without `0x`.
+- The setup guide always works on one project, and it no longer offers an installation-only view.
+
 ## 0.1.5 (2026-10-05)
 
 - The installation connects to the recv.fund program (Solana) and factory contract (Robinhood Chain) by itself. Each release ships the addresses of its deployments; at startup and every five minutes, the server sets the one for each network that has none yet, after checking its code. An address that is already set is never changed.

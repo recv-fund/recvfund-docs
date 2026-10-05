@@ -24,27 +24,33 @@ The hot wallet comes before registration because registration writes the hot wal
 
 Steps 2, 3 and 4 repeat for every chain you want to accept payments on. Step 4 also repeats for every project.
 
-## The setup guide in the dashboard
+## The Setup page
 
-The **Overview** page opens with a **Set up payments** panel that follows the same order as this guide. It shows what's done and what's left, explains each step in a few sentences, and links to the section of the page where you do it. It doesn't change anything itself.
+Open **Setup** in the sidebar. Until payment setup is complete, every other page shows a reminder banner with a **Continue setup** link to it; owners and admins see the banner. Setup is complete when every required step is done on at least one network for the project.
 
-At the top of the panel, choose the **Project** and the **Setup network**. The steps are listed on the left, grouped by where they apply:
+The page has two parts.
+
+**Integration status** checks what can stop payments, each time you open the page or select **Run checks again**. It changes nothing.
+
+- **Server:** the database and Redis answer.
+- **For each network:** whether the RPC nodes answer, whether the recv.fund contract is verified, whether the project's hot wallet holds SOL or ETH for network fees, and whether the project's registration is active.
+- **Project activity:** sweeps, payouts and webhook deliveries that failed in the last seven days.
+
+Each problem links to the page that fixes it. Checks your role can't read are left out.
+
+**Set up payments** walks through the steps in the same order as this guide. Choose the **Project** and the **Network** at the top. The steps are listed on the left, grouped by where they apply:
 
 - **Installation:** **Site URL**, **RPC connection** and **recv.fund contract**. The contract step is a check, not a task: the installation connects to the recv.fund program (Solana) or factory contract (Robinhood Chain) by itself, and the step shows it as verified with the fee for new registrations.
 - **Project:** **Hot wallet**, **Register your wallets** (the one transaction you sign and pay for with your browser wallet), **Accepted currencies** and **Test payment**. Test payment is done once a payment of the project reaches `FILLED` or `OVER_FILLED`.
 - **Optional:** **Email (SMTP)**, which only payout approvals need.
 
-Select a step to see its explanation, its status on the selected network, and a button that opens the right section of the right page. Those pages show a **Payment setup guide** link that brings you back to the same step. **Check again** reloads every status after you change something. **Previous** and **Next step** move through the list.
-
-Network checks apply only to the selected network. Repeat the network steps for each network you want to accept. The **Site URL** step stays open when the site URL differs from the address you opened the dashboard at, because payment links would point to the wrong place.
-
-With **Installation only** selected as the project, the panel shows the installation steps. If your role can't complete a step, the panel names the role that can. Below the steps, **How money moves** shows the path of a payment: customer wallet, deposit address, hot wallet sweep, cold wallet. Select a stage to read what happens there. **Hide guide** and **Show guide** toggle the panel, and the browser remembers the choice.
+Select a step to see its explanation, its status on the selected network, and a button that opens the right section of the right page. Those pages show a **Payment setup guide** link that brings you back to the same step. **Check again** reloads every status after you change something. **Previous** and **Next step** move through the list. Network checks apply only to the selected network; repeat the network steps for each network you want to accept. Below the steps, **How money moves** shows the path of a payment; select a stage to read what happens there.
 
 {/* prettier-ignore */}
 > [!NOTE]
 >
-> The step-by-step layout is in version 0.1.3 and later. Run the update
-> command in [Script usage](/deployment-guide/script-usage/) to get it.
+> The Setup page and the banner are in version 0.1.7 and later. In 0.1.3 to
+> 0.1.6 the guide is at the top of the Overview page.
 
 ## What you need
 

@@ -8,6 +8,7 @@
     "build": "node scripts/llms-txt.mjs && next build && pagefind --site .next/server/app --output-path out/_pagefind",
     "llms": "node scripts/llms-txt.mjs",
     "test:examples": "node scripts/llms-txt.mjs && node --test examples/*.test.mjs",
+    "check:export": "node scripts/check-export.mjs",
     "start": "serve out -l 3040",
     "typecheck": "tsc --noEmit",
     "biome": "biome check --write .",

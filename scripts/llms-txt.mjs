@@ -165,3 +165,25 @@ writeFileSync(
       )
       .join('\n\n'),
 );
+
+writeFileSync(
+  join(root, 'public', 'robots.txt'),
+  `User-Agent: *\nAllow: /\n\nSitemap: ${siteUrl}/sitemap.xml\n`,
+);
+const escapeXml = (value) =>
+  value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+writeFileSync(
+  join(root, 'public', 'sitemap.xml'),
+  '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    pages
+      .map(
+        (page) =>
+          `  <url><loc>${escapeXml(new URL(page.route, siteUrl).href)}</loc></url>`,
+      )
+      .join('\n') +
+    '\n</urlset>\n',
+);

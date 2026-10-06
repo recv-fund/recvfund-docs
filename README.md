@@ -41,6 +41,8 @@ content/             MDX pages and _meta.ts sidebar definitions
 public/llms.txt      one line per page, for language-model readers (generated)
 public/llms-full.txt complete documentation with source URLs (generated)
 public/**/*.md      linked Markdown versions of every content page (generated)
+public/robots.txt   public crawling policy and sitemap location (generated)
+public/sitemap.xml  canonical content routes from the MDX source tree (generated)
 public/examples/    downloadable webhook signature verification helper
 scripts/llms-txt.mjs exports index, full text and Markdown before next build
 types/css.d.ts       declaration for global stylesheet imports
@@ -85,12 +87,23 @@ yarn typecheck
 yarn biome:ci
 yarn test:examples # raw-body HMAC verification and generated-doc link checks
 yarn build        # fails on a bad _meta.ts key, invalid front matter or an MDX error
+yarn check:export # robots, sitemap targets, canonical URLs and agent exports
 ```
 
 `yarn build` writes `out/` and reports the page count; `public/llms.txt` is
 regenerated at the start. The `zod` resolution in `package.json` pins the
 version `nextra-theme-docs` 4.6.1 was written against; with zod 4.6 the
 theme's Layout props validation fails on every page.
+
+Crawler discovery is part of the static export. `robots.txt` allows public
+documentation crawling and points to `https://docs.recv.fund/sitemap.xml`.
+The sitemap uses the same MDX content routes as the agent indexes, with trailing
+slashes and no guessed update timestamps. Every content page declares its own
+canonical HTML URL and Markdown alternative. CI checks all sitemap URLs against
+actual exported HTML and all agent targets against exported Markdown. An edge
+proxy may prepend its own robots policy; inspect the public response after an
+authorized deployment to verify it still advertises the sitemap. Staging checks
+do not change the live robots policy or publish the new files.
 
 ## Writing pages
 

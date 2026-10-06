@@ -19,6 +19,9 @@ export async function generateMetadata(props: PageProps) {
   return {
     ...metadata,
     alternates: {
+      canonical: params.mdxPath?.length
+        ? `https://docs.recv.fund/${params.mdxPath.join('/')}/`
+        : 'https://docs.recv.fund/',
       types: {
         'text/markdown': `https://docs.recv.fund/${markdownPath}.md`,
       },

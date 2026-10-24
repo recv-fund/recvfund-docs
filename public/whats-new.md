@@ -2,6 +2,10 @@
 
 The full history is on the [Change log](https://docs.recv.fund/support/change-log.md) page.
 
+## 0.1.19: Robinhood Chain mainnet
+
+recv.fund is deployed on Robinhood Chain mainnet as a limited pilot; the contracts have not had an independent audit yet. A mainnet installation on 0.1.19 or later connects to the factory by itself. Add an RPC node that supports tracing before taking ETH payments. Solana mainnet is not deployed yet.
+
 ## 0.1.8 to 0.1.18: checkout and operations
 
 Checkout signs single-step payments on the first click, shows live progress and can look for a missed transfer. Solana transactions go through your installation, so wallet RPC errors no longer block payments. The Overview shows current operations and balances. Agents can discover what an installation offers through `/api/v1/integration/capabilities`. Dashboard and checkout pages are kept out of search engines. Update with `--update`.

@@ -9,6 +9,10 @@ Short release notes are on the [What's new](/whats-new/) page. This page is the 
 
 Since 0.1.2, every change to recv.fund is published as a new version number, and a published version never changes. `--update` installs the newest version.
 
+## 0.1.19 (2026-10-24)
+
+- A mainnet installation connects to the Robinhood Chain mainnet factory `0x0Db950525Bc5214162426ee3D31822311EFe17fA` by itself, after the same code and fee checks as on testnet. The factory is a limited pilot without an independent audit. The Solana mainnet program is not deployed yet. See [Networks and tokens](/support/networks/#program-addresses).
+
 ## 0.1.18 (2026-10-12)
 
 - Dashboard and checkout pages ask search engines not to index them, in page metadata and in an `X-Robots-Tag` header. Each installation serves its own `/robots.txt`, which keeps the API and OpenAPI documents out of crawlers' discovery. This does not change authentication.

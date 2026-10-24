@@ -63,10 +63,15 @@ Each release ships these addresses, and the installation connects to the one for
 | --- | --- | --- | --- | --- | --- |
 | Solana | devnet | `recvfund` program | `FAZUvvc2anrhgkP6sVczAHp2wkFCfhzpFcbiBt1mVM8J` | 100 bps, taken at sweep | `GStZmhS72eX1euYiwQY9MaxahBopDBLGwfTtXPge3DK` |
 | Robinhood Chain | testnet (46630) | `RecvFundFactory` contract | `0xDc055613c64a39ea6a9a2ad8c15D587381A12f8c` | 100 bps, taken at sweep | `0x74520411b6349b1A79f504D9b4717238Dbade236` |
+| Robinhood Chain | mainnet (4663) | `RecvFundFactory` contract | `0x0Db950525Bc5214162426ee3D31822311EFe17fA` | 100 bps, taken at sweep | `0x263073aEAf3b1e1C9d892E8f92B969E6e7AdB2f1` |
 
-Both were deployed on 2026-10-03. The fee rate and fee collector shown are the terms a registration made now receives; a registration keeps the terms it was created with. The Solana devnet program's config account is `5uLBoziU1on7DmPDyYPobgZhkFeWtjy91GW3HGWxFLcT`. The devnet program still has an upgrade authority, so treat it as provisional; the server refuses a mainnet program that has one. The Robinhood Chain contracts have no proxy and cannot be upgraded, and the factory source is verified on the Robinhood Chain testnet explorer.
+The two test network deployments were made on 2026-10-03. The fee rate and fee collector shown are the terms a registration made now receives; a registration keeps the terms it was created with. The Solana devnet program's config account is `5uLBoziU1on7DmPDyYPobgZhkFeWtjy91GW3HGWxFLcT`. The devnet program still has an upgrade authority, so treat it as provisional; the server refuses a mainnet program that has one. The Robinhood Chain contracts have no proxy and cannot be upgraded, and the factory source is verified on the Robinhood Chain testnet explorer.
 
-The mainnet program and factory are not deployed yet.
+The Robinhood Chain mainnet factory was deployed on 2026-10-24 from the same contract build as the testnet factory, and its source is [verified on Sourcify](https://sourcify.dev/server/v2/contract/4663/0x0Db950525Bc5214162426ee3D31822311EFe17fA). It is a limited pilot: the contracts have not had an independent audit yet. Server 0.1.19 and later connect a mainnet installation to it automatically. The Solana mainnet program is not deployed yet.
+
+> [!NOTE]
+>
+> On Robinhood Chain mainnet, add an RPC node that supports `debug_traceTransaction` before taking ETH payments. The public RPC is rate limited and cannot credit ETH deposits. See [Node configuration](https://docs.recv.fund/onboarding-guide/node-configuration.md#add-rpc-node).
 
 Superseded, do not use: the Robinhood Chain testnet registry `0xBe4E003224977110100463EcC70D399bA0f1c9F8` and the Solana devnet program `G9u3a8P6T5RFsgQhjVC5Yw7oAUqURst5MQJi1rFVkzAt`, both deployed on 2026-09-30. They took a fee on checkout payments as well as on sweeps and are not accepted by the current server build.
 

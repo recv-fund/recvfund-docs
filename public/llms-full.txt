@@ -175,7 +175,7 @@ The Overview page walks you through payment setup one step at a time, for each p
 
 ## 2026-09: Initial release
 
-The first public release of recv.fund. The test network deployments were replaced on 2026-10-03; the addresses are under [Networks and tokens](https://docs.recv.fund/support/networks.md#program-addresses). Mainnet is not deployed yet.
+The first public release of recv.fund. The test network deployments were replaced on 2026-10-03; the addresses are under [Networks and tokens](https://docs.recv.fund/support/networks.md#program-addresses). Mainnet was not deployed at the time.
 
 - Solana: USDC, USDT and SOL. Robinhood Chain: USDG and ETH.
 - One-line installer for mainnet and testnet, with update, restart, status and reset commands.
@@ -3385,7 +3385,7 @@ Since 0.1.2, every change to recv.fund is published as a new version number, and
 
 ## 2026-09: Initial release
 
-The first public release of recv.fund. The mainnet factory and program are not deployed yet, so payments can be taken only on the test networks.
+The first public release of recv.fund. The mainnet factory and program were not deployed at the time, so payments could be taken only on the test networks.
 
 On 2026-10-03 the test network deployments were replaced by the payment model described below: customers pay their deposit address directly, the fee is taken only at sweep and is fixed per registration, and registration is one transaction. The Robinhood Chain testnet registry `0xBe4E003224977110100463EcC70D399bA0f1c9F8` and the Solana devnet program `G9u3a8P6T5RFsgQhjVC5Yw7oAUqURst5MQJi1rFVkzAt`, both deployed on 2026-09-30, are superseded. The current addresses are listed under [Networks and tokens](https://docs.recv.fund/support/networks.md#program-addresses).
 
